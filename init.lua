@@ -2,14 +2,18 @@
 	
 require "cjson"	--cjson库
 require "ngx" --ngx库
-require "lua_middle_class" --lua 对象增强库
 
 
---设定下载的cache标识
-local down_cache = ngx.shared.down_cache
-local suc = down_cache:add("is_cache", "0")
+--aes 加密相关
+cachDict = ngx.shared.cachDict
+cachDict:set('aeskey', '', 1)
+cachDict:set('aessecret', '',1)
+
+--总开关
+local suc
+suc = cachDict:set('state', '1',1)
 
 --如果出错则记录初始化失败
 if not suc then
-    ngx.log(ngx.ERR, 'lua init _down_is_cache failed')
+    ngx.log(ngx.ERR, 'lua init failed')
 end

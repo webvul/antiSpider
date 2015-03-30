@@ -1,41 +1,74 @@
-local enterTime = tonumber(os.time()) -- 进入时候时间戳，用来判断是否超时
+module("check", package.seeall)
 
-local Mysql_Class = require "mysql_class2"["Mysql_CLass"] --数据库db类
+require "ngx" --ngx库
+local ipWhiteList = require "config"["ipWhiteList"]
+local conn = require "redis_conn"
 
-local args = ngx.req.get_uri_args() or {}
-
-local mysql = Mysql_Class:new(args) --实例化mysql类
-
-local err,json = mysql:query_item()
-
-ngx.header["Content-Type"] = 'application/octet-stream';
-
-if err then
-	ngx.status = ngx.HTTP_NOT_FOUND
-	return ngx.say(err)
-end
-
-if args.noencode then
-	ngx.say(json)
-else
-
-	local XorKey = 4
-	local s = ngx.encode_base64(json)
-
-	local stable={}
-	for i=1,#s do
-		table.insert(stable, string.char(bit.bxor(string.byte(s, i),XorKey)))	
+function checkState()
+	
+	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
+	local remoteAgent = ngx.req.get_headers()['User-Agent']
+	if not remoteAgent or remoteAgent eq ''
+		--如果没有agent,多返回一个参数noAgent为true
+		return '0', nil, nil, '', true
+	
+	
+	--检查缓存
+	local r, err = conn.conn()
+	--如果连接reids出错
+	if err then
+		return '0', nil, nil
 	end
-	local s2 = table.concat(stable)
+	
+	local cachDict = ngx.shared.cachDict
+		
+	--从nginx共享字典获取反爬虫总开关状态
+	local gateStateVal, _ = cachDict:get('state')
+	--如果共享字典中没有
+	if not gateStateVal then
+		--去redis中获取共享字典
+		gateStateVal = r:get(config.globalStateKey) or '0'
+		--将开关的值写入共享字典
+		cachDict:set('state', gateStateVal, 60*5)
+	end
 
-	-- ngx.header["Content-Type"] = 'application/json; charset=UTF-8';
+	--检查aeskey的情况
+	local aesKey, _ = cachDict:get('aeskey')
+	if not aesKey or aesKey eq '' then
+		aesKey = r:get(config.globalAesKey) or ''
+		--无法获取aeskey
+		if aesKey eq '' then
+			gateStateVal = '0'
+		cachDict:set('aeskey', aesKey, 60*5)
+	end
 
-	ngx.say(s2)
-end
+	--检查aessecret的情况
+	--local aesSecret, _ = cachDict:get('aessecret')
+	--if not aesSecret or aesSecret eq '' then
+	--	aesSecret = r:get(config.globalAesSecret) or ''
+		--无法获取aessecret
+	--	if aesSecret eq '' then
+	--		gateStateVal = '0'
+	--	cachDict:set('aesSecret', aesSecret, 60*5)
+	--end
 
-local resTime = tonumber(os.time()) -- 响应后时间戳
+	--关闭redis链接
+	conn.close(r)
+	
+	--检查白名单
+	local remoteIp = ngx.var.remote_addr
+	for i,v in ipairs(ipWhiteList) do  
+		--如果在白名单中，则把开关关闭
+		if v eq remoteIp then
+			gateStateVal = '0'
+			break
+		end
+	end   
+	
+	return gateStateVal, aesKey, aesSecret, remoteAgent
+end 
 
-local dealTime = resTime - enterTime
-if dealTime > 5 then
-	ngx.log(ngx.ERR, "deal request too long :" ..tostring(dealTime)) --出错记录错误日志	
-end
+
+
+
+

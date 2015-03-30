@@ -15,9 +15,9 @@ connRedis = {
 	max_idle_timeout=1000*10,
 }
 
-aesPrivateKey = 'F06DA4A3DF28030E80FAEA2E3A7726CC'
-sessionKey = '7A6913620518EDFF3502427AF2CCF7ED17961AF2DD3ED280E909652F58B741E2'
-sessionName = 'td_ssid'
+aesPrivateKey = '123'
+sessionKey = '123'
+sessionName = '123'
 sessionExpire = "Wed, 09 Jun 2099 10:18:14 GMT"
 sessionMaxAge = 3600*24*365*10
 

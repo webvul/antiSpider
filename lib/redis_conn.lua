@@ -1,41 +1,32 @@
-local enterTime = tonumber(os.time()) -- 进入时候时间戳，用来判断是否超时
+module("redis_conn", package.seeall)
 
-local Mysql_Class = require "mysql_class2"["Mysql_CLass"] --数据库db类
+local redis = require "resty.redis"
+local RedisConn = require "config"["connRedis"]
 
-local args = ngx.req.get_uri_args() or {}
 
-local mysql = Mysql_Class:new(args) --实例化mysql类
-
-local err,json = mysql:query_item()
-
-ngx.header["Content-Type"] = 'application/octet-stream';
-
-if err then
-	ngx.status = ngx.HTTP_NOT_FOUND
-	return ngx.say(err)
-end
-
-if args.noencode then
-	ngx.say(json)
-else
-
-	local XorKey = 4
-	local s = ngx.encode_base64(json)
-
-	local stable={}
-	for i=1,#s do
-		table.insert(stable, string.char(bit.bxor(string.byte(s, i),XorKey)))	
+function conn()
+		
+	--直接连接
+	local r = redis:new()
+	r:set_timeout(1000) -- 1 second
+	local ok, err = red:connect(RedisConn.host, RedisConn.port)
+	
+	if not ok then
+		ngx.log(ngx.ERR, "redis library error " .. err) --出错记录错误日志，无法连接redis
+		return nil, err
 	end
-	local s2 = table.concat(stable)
+	
+	return r, nil
 
-	-- ngx.header["Content-Type"] = 'application/json; charset=UTF-8';
-
-	ngx.say(s2)
 end
 
-local resTime = tonumber(os.time()) -- 响应后时间戳
 
-local dealTime = resTime - enterTime
-if dealTime > 5 then
-	ngx.log(ngx.ERR, "deal request too long :" ..tostring(dealTime)) --出错记录错误日志	
+
+function close(r) --关闭redis连接封装
+	 local ok, err = r:set_keepalive(RedisConn.max_idle_timeout, r.pool) --将本链接放入连接池
+	 if not ok then  --如果设置连接池出错
+		ngx.log(ngx.ERR, "redis failed to back connect pool: " .. err) 
+	 end
 end
+
+ 
