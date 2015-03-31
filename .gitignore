@@ -1,4 +1,4 @@
 ./config.lua
 /config.lua
-/inc/config.lua
-./inc/config.lua
+/lib/config.lua
+./lib/config.lua
