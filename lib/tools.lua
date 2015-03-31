@@ -41,14 +41,14 @@ end
 function jsonp(aesKey, encryptStr)
 	local args = ngx.req.get_uri_args()
 	local callbackName = args['callback']
-	return resStr = string.format(';%s("%s","%s");', callbackName, encryptStr)
+	return string.format(';%s("%s","%s");', callbackName, encryptStr)
 end
 
 --验证加密cookie是否合法
 function verifySessionCookie()
 	local cookie, err = ck:new()
 	--出错了
-	if not cookie:
+	if not cookie then
 		return nil, err
 	end
 	local sessionVal, err = cookie:get(config.sessionName)
@@ -56,22 +56,22 @@ function verifySessionCookie()
 	if err then
 		return nil, err
 	end
-	if not sessionVal or sessionVal eq '' then
+	if not sessionVal or sessionVal.eq('') then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie not have sessionVal"))
 		return false, nil
 	end
-	
+
 	--检查sessionCookie是否合法
 	--base64解码
 	sessionVal = ngx.decode_base64(sessionVal)
 	local sessionTimestamp = string.sub(sessionVal,0,13)
 	local sessionSign = string.sub(sessionVal,14, -1)
-	local trueSign = sha256(string.format('%s&%s', sessionTimestamp, config.sessionKey)))
-	
+	local trueSign = sha256(string.format('%s&%s', sessionTimestamp, config.sessionKey))
+
 	if trueSign ~= sessionSign then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie sign not valid, sessionval : %s", sessionVal))
 		return false, nil
-	else if getNowTs() - tonumber(sessionTimestamp) > 3600*48 then
+	elseif getNowTs() - tonumber(sessionTimestamp) > 3600*48 then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie timestamp expire sessionval : %s", sessionVal))
 		return false, nil
 	else
@@ -82,10 +82,11 @@ end
 --验证deviceid是否合法
 function simpleVerifyDeviceId()
 	local cookie, err = ck:new()
-	if not cookie:
+	if not cookie then
 		return nil, err
+	end
 	local deviceId, err = cookie:get(config.deviceIdCookieName)
-	if not deviceId or deviceId eq '' then
+	if not deviceId or deviceId.eq('') then
 		return false, nil
 	else
 		return deviceId

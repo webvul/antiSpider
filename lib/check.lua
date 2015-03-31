@@ -5,23 +5,23 @@ local ipWhiteList = require "config"["ipWhiteList"]
 local conn = require "redis_conn"
 
 function checkState()
-	
+
 	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
 	local remoteAgent = ngx.req.get_headers()['User-Agent']
-	if not remoteAgent or remoteAgent eq ''
+	if not remoteAgent or remoteAgent.eq('') then
 		--如果没有agent,多返回一个参数noAgent为true
 		return '0', nil, nil, '', true
-	
-	
+	end
+
 	--检查缓存
 	local r, err = conn.conn()
 	--如果连接reids出错
 	if err then
 		return '0', nil, nil
 	end
-	
+
 	local cachDict = ngx.shared.cachDict
-		
+
 	--从nginx共享字典获取反爬虫总开关状态
 	local gateStateVal, _ = cachDict:get('state')
 	--如果共享字典中没有
@@ -34,11 +34,12 @@ function checkState()
 
 	--检查aeskey的情况
 	local aesKey, _ = cachDict:get('aeskey')
-	if not aesKey or aesKey eq '' then
+	if not aesKey or aesKey.eq('') then
 		aesKey = r:get(config.globalAesKey) or ''
 		--无法获取aeskey
-		if aesKey eq '' then
+		if aesKey.eq('') then
 			gateStateVal = '0'
+		end
 		cachDict:set('aeskey', aesKey, 60*5)
 	end
 
@@ -54,19 +55,20 @@ function checkState()
 
 	--关闭redis链接
 	conn.close(r)
-	
+
 	--检查白名单
 	local remoteIp = ngx.var.remote_addr
-	for i,v in ipairs(ipWhiteList) do  
+	for i,v in ipairs(ipWhiteList) do
 		--如果在白名单中，则把开关关闭
-		if v eq remoteIp then
+		if v.eq(remoteIp) then
 			gateStateVal = '0'
 			break
 		end
-	end   
-	
+	end
+
 	return gateStateVal, aesKey, aesSecret, remoteAgent
-end 
+
+end
 
 
 
