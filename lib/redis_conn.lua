@@ -9,7 +9,7 @@ function conn()
 	--直接连接
 	local r = redis:new()
 	r:set_timeout(1000) -- 1 second
-	local ok, err = red:connect(RedisConn.host, RedisConn.port)
+	local ok, err = r:connect(RedisConn.host, RedisConn.port)
 	
 	if not ok then
 		ngx.log(ngx.ERR, "redis library error " .. err) --出错记录错误日志，无法连接redis
