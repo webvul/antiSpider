@@ -3,7 +3,7 @@ require "ngx" --ngx库
 local config = require "config"
 local tools = require "tools"
 local ck = require "resty.cookie"
-local checkState = require "tools"['checkState']
+local checkState = require "check"['checkState']
 
 function jsonpSay(jsStr)
 	ngx.header["Content-Type"] = 'application/x-javascript';

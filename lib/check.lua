@@ -7,8 +7,8 @@ local conn = require "redis_conn"
 function checkState()
 
 	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
-	local remoteAgent = ngx.req.get_headers()['User-Agent']
-	if not remoteAgent or remoteAgent.eq('') then
+	local remoteAgent = ngx.req.get_headers()['User-Agent'] or ''
+	if remoteAgent.eq('') then
 		--如果没有agent,多返回一个参数noAgent为true
 		return '0', nil, nil, '', true
 	end
