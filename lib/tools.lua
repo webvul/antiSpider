@@ -1,8 +1,11 @@
 module("tools", package.seeall)
+
 require "ngx" --ngx库
+require "ndk"
 
 local ck = require "resty.cookie"
 local resty_sha256 = require "resty.sha256"
+local resty_md5 = require "resty.md5"
 local aes = require "resty.aes"
 local str = require "resty.string"
 local config = require "config"
@@ -26,22 +29,39 @@ end
 
 --aes128加密算法
 function aes128Encrypt(strParm, frontAesKey)
-	local aes_128_cbc_md5 = aes:new(frontAesKey)
-	local encrypted = aes_128_cbc_md5:encrypt(strParm)
+	
+	local aes_128_cbc_with_iv = assert(aes:new(frontAesKey,
+        nil, aes.cipher(128,"cbc"), {iv=config.globalAesIv}))
+	local encrypted = aes_128_cbc_with_iv:encrypt(strParm)
 	return str.to_hex(encrypted)
+		
 end
 
 --aes128解密算法
 function aes128Decrypt(encryptedStrParm, frontAesKey)
-	local aes_128_cbc_md5 = aes:new(frontAesKey)
-	return aes_128_cbc_md5:decrypt(encryptedStrParm)
+	
+	local md5 = resty_md5:new()
+	md5:update(frontAesKey)
+	local digest = md5:final()
+	local aes_iv_key = digest
+	
+	local md5 = resty_md5:new()
+	md5:update(config.globalAesIv)
+	local digest = md5:final()
+	local aes_iv_val = digest
+	
+	local aes_iv = aes:new(aes_iv_key, nil, aes.cipher(128,"cbc"), {iv=aes_iv_val})
+	local decryptStr = aes_iv:decrypt(ngx.decode_base64(encryptedStrParm)) or ''
+	
+	return decryptStr
+
 end
 
 --jsonp方法返回
 function jsonp(aesKey, encryptStr)
 	local args = ngx.req.get_uri_args()
-	local callbackName = args['callback']
-	return string.format(';%s("%s","%s");', callbackName, encryptStr)
+	local callbackName = args['callback'] or 'callback'
+	return string.format(';%s(["%s","%s","%s"]);', callbackName, aesKey, config.globalAesIv, encryptStr)
 end
 
 --验证加密cookie是否合法
@@ -56,7 +76,7 @@ function verifySessionCookie()
 	if err then
 		return nil, err
 	end
-	if not sessionVal or sessionVal.eq('') then
+	if not sessionVal or sessionVal == '' then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie not have sessionVal"))
 		return false, nil
 	end
@@ -64,10 +84,9 @@ function verifySessionCookie()
 	--检查sessionCookie是否合法
 	--base64解码
 	sessionVal = ngx.decode_base64(sessionVal)
-	local sessionTimestamp = string.sub(sessionVal,0,13)
-	local sessionSign = string.sub(sessionVal,14, -1)
-	local trueSign = sha256(string.format('%s&%s', sessionTimestamp, config.sessionKey))
-
+	local sessionTimestamp = string.sub(sessionVal,1,10)
+	local sessionSign = string.sub(sessionVal,12, -1)
+	local trueSign = sha256(sessionTimestamp..config.md5Gap..config.sessionKey)
 	if trueSign ~= sessionSign then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie sign not valid, sessionval : %s", sessionVal))
 		return false, nil
@@ -86,10 +105,12 @@ function simpleVerifyDeviceId()
 		return nil, err
 	end
 	local deviceId, err = cookie:get(config.deviceIdCookieName)
-	if not deviceId or deviceId.eq('') then
+	deviceId = ngx.unescape_uri(deviceId)
+	if not deviceId or deviceId == '' then
 		return false, nil
 	else
-		return deviceId
+		
+		return deviceId or ''
 	end
 end
 

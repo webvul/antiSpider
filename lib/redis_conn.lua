@@ -23,7 +23,7 @@ end
 
 
 function close(r) --关闭redis连接封装
-	 local ok, err = r:set_keepalive(RedisConn.max_idle_timeout, r.pool) --将本链接放入连接池
+	 local ok, err = r:set_keepalive(RedisConn.max_idle_timeout, RedisConn.pool) --将本链接放入连接池
 	 if not ok then  --如果设置连接池出错
 		ngx.log(ngx.ERR, "redis failed to back connect pool: " .. err) 
 	 end

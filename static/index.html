@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>反爬虫jssdk测试</title>
+<meta name="keywords" content="Base64编码,Base64解码" />
+
+<script src="http://piccvote.qiniudn.com/dist/js/vendor/jquery.min.js" type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/jquery.cookie.js"  type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/aes.all.js"  type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/md5.all.js" type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/moment.js" type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/base64.min.js" type="text/javascript"></script>
+
+
+</head>
+<body>
+<h1>反爬虫jssdk测试页面</h1>
+
+<div id="info"></div>
+
+<script>
+$(function(){
+	
+
+	
+	var getKey = function(){
+		$.ajax({
+			'url':'/td/key',
+			'data':{'r':Math.random()},
+			'dataType':'jsonp',
+			'jsonp':'callback',
+			'success':function(data){
+					alert('key:'+data[0])
+					alert('iv:'+data[1])
+					alert('str:'+data[2])
+					alert('success get key and encrypt')
+					var key = data[0],
+						iv = data[1],
+						aesStr = data[2]
+
+
+					var key = CryptoJS.MD5(key);
+					var iv = CryptoJS.MD5(iv);
+					var encrypted = CryptoJS.AES.encrypt(aesStr, key, {iv: iv});
+					
+					$.cookie('td_did', encrypted.toString(), { expires: 1, path: '/' });
+					$('#info').append(data[2])
+					$('#info').append('<br/><br/>')
+					$('#info').append(encrypted.toString())
+					
+					alert('set cookie success')
+				}
+			})
+	}
+	
+	var did = $.cookie('td_did')
+	if(!did){
+		alert('not found did')
+		getKey()
+	}
+	else{
+		$('#info').append(did)
+	}
+	
+
+})
+</script>
+</body>
+</html>

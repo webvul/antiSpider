@@ -1,17 +1,18 @@
 require "ngx" --ngx库
 
+
 local config = require "config"
 local tools = require "tools"
 local ck = require "resty.cookie"
 local conn = require "redis_conn"
-local checkState = require "tools"['checkState']
+local checkState = require "check"['checkState']
 
 
 function dealProxyPass()
 	local args = ngx.req.get_uri_args()
 	local tdcheck = args['_tdcheck']
 	--如果开启了check
-	if tdcheck.eq(1) then
+	if tdcheck == '1' then
 		jsonpStr = tools.jsonp('1','1')
 		ngx.say(jsonpStr)
 		return ngx.exit(ngx.HTTP_OK)
@@ -23,12 +24,12 @@ function erroResponse()
 	local args = ngx.req.get_uri_args()
 	local tdcheck = args['_tdcheck']
 	--如果开启了check
-	if tdcheck.eq('1') then
+	if tdcheck == '1' then
 		jsonpStr = tools.jsonp('0','')
 		ngx.say(jsonpStr)
 		return ngx.exit(ngx.HTTP_OK)
 	end
-	ngx.exit(502)
+	ngx.exit(400)
 end
 
 
@@ -42,7 +43,7 @@ function doProxy()
 		return erroResponse()
 	end
 	--如果 gateStateVal 为0，表示关闭验证，直接pass
-	if gateStateVal.eq('0') then
+	if gateStateVal == '0' then
 		return dealProxyPass()
 	end
 
@@ -66,12 +67,19 @@ function doProxy()
 	if err then
 		return dealProxyPass()
 	end
-	if not deviceId or  deviceId.eq('') then
+	
+	ngx.log(ngx.ERR, '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'..deviceId)
+	
+	if not deviceId or  deviceId == '' then
 		ngx.log(ngx.ERR, string.format("verifyDeviceId not have deviceId"))
 		return erroResponse()
 	end
+	
+	ngx.log(ngx.ERR, '*************************************'..deviceId)
 	--检查deviceId的值是否被篡改
-	local trueDeviceContent = tools.aes128Decrypt(deviceId)
+	local trueDeviceContent = tools.aes128Decrypt(deviceId, aesKey)
+	ngx.log(ngx.ERR, '*************************************'..trueDeviceContent)
+	
 	local didIpAgent = trueDeviceContent
 	--检查ip地址是否合法
 	if didIpAgent ~= tools.sha256(remoteIp..config.md5Gap..remoteAgent) then
