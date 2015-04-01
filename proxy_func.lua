@@ -140,7 +140,7 @@ function doProxy()
 	local dtsKey = string.format(config.dtsKey, deviceId)
 	local dipKey = string.format(config.dipKey, remoteIp)
 	
-	ngx.log(ngx.ERR,'********************************'..didKey)
+	--ngx.log(ngx.ERR,'********************************'..didKey)
 	
 	--获取上一次请求时间
 	local didTs = r:get(dtsKey)
