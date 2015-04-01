@@ -8,7 +8,12 @@ local conn = require "redis_conn"
 local checkState = require "check"['checkState']
 
 
-function dealProxyPass()
+function dealProxyPass(r)
+	if r then
+		--关闭redis链接
+		conn.close(r)
+	end
+	
 	local args = ngx.req.get_uri_args()
 	local tdcheck = args['_tdcheck']
 	--如果开启了check
@@ -21,7 +26,11 @@ function dealProxyPass()
 
 end
 
-function erroResponse()
+function erroResponse(r)
+	if r then
+		--关闭redis链接
+		conn.close(r)
+	end
 	local args = ngx.req.get_uri_args()
 	local tdcheck = args['_tdcheck']
 	--如果开启了check
@@ -111,16 +120,16 @@ function doProxy()
 	if not ok then
 		local lastKey, err = r:get(config.lastGlobalAesKey)
 		if err then
-			return dealProxyPass()
+			return dealProxyPass(r)
 		end
 		--如果没有lastkey
 		if lastKey == ngx.null or not lastKey then
-			return erroResponse()
+			return erroResponse(r)
 		else
 			local ok, err = deepCheckDeviceId(deviceId, lastKey, remoteIp, remoteAgent)
 			if not ok then
 				ngx.log(ngx.ERR, string.format("deepCheckDeviceId twice still error, deviceid: %s", deviceId))
-				return erroResponse()
+				return erroResponse(r)
 			end
 		end
 	end
@@ -132,7 +141,7 @@ function doProxy()
 	--如果在黑名单中
 	if isBlack ~= ngx.null and isBlack then
 		ngx.log(ngx.ERR, string.format("request in blackList, deviceId %s", deviceId))
-		return erroResponse()
+		return erroResponse(r)
 	end
 
 	--检查此deviceid是否访问频率过快
@@ -190,12 +199,12 @@ function doProxy()
 		--当满足规则时，表示请求过于频繁
 		if config.freqRule[i] ~= -1 and  tempSum >= config.freqRule[i] then
 			ngx.log(ngx.ERR, string.format("request too freqency, deviceId %s, rule: %s", deviceId, i))
-			return erroResponse()
+			return erroResponse(r)
 		end
 	end
 
-	--将此deviceid存入ipkey中
-	r:lpush(dipKey, deviceId)
+	--将此deviceid存入ipkey中,这里要用set的key，保证数组中唯一
+	r:sadd(dipKey, deviceId)
 
 	--更新redis的key的expire过期时间
 	r:expire(dtsKey, 600)
@@ -203,7 +212,7 @@ function doProxy()
 	r:expire(dipKey, 3600)
 	
 	--执行proxy
-	dealProxyPass()
+	dealProxyPass(r)
 	--记录时间，进行转发
 	--如果超过1秒, 记录错误日志
 	local dealTime = tools.getNowTs() - enterTime

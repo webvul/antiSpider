@@ -29,10 +29,20 @@ end
 --aes128加密算法
 function aes128Encrypt(strParm, frontAesKey)
 	
-	local aes_128_cbc_with_iv = assert(aes:new(frontAesKey,
-        nil, aes.cipher(128,"cbc"), {iv=config.globalAesIv}))
-	local encrypted = aes_128_cbc_with_iv:encrypt(strParm)
-	return str.to_hex(encrypted)
+	local md5 = resty_md5:new()
+	md5:update(frontAesKey)
+	local digest = md5:final()
+	local aes_iv_key = digest
+	
+	local md5 = resty_md5:new()
+	md5:update(config.globalAesIv)
+	local digest = md5:final()
+	local aes_iv_val = digest
+	
+	local aes_iv = aes:new(aes_iv_key, nil, aes.cipher(128,"cbc"), {iv=aes_iv_val})
+	local encryptStr = aes_iv:encrypt(strParm) 
+	
+	return ngx.encode_base64(encryptStr)
 		
 end
 
