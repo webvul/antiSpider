@@ -67,17 +67,27 @@ function aes128Decrypt(encryptedStrParm, frontAesKey)
 end
 
 --jsonp方法返回
-function jsonp(aesKey, encryptStr)
+function jsonp(aesKey, encryptStr, cbName)
 	local globalAesIv = config.globalAesIv
+	local callbackName
 	--如果aeskey是空，则都返回空或者'0'
 	if aesKey == '' or aesKey == '0' or aesKey == '1' then
 		globalAesIv = ''
 		encryptStr = ''
 	end
-	local args = ngx.req.get_uri_args()
-	local callbackName = args['callback'] or 'callback'
+	if not cbName or cbName == nil then
+		local args = ngx.req.get_uri_args()
+		callbackName = args['callback'] or 'callback'
+	else
+		callbackName = cbName
+	end
+	
 	return string.format(';%s(["%s","%s","%s"]);', callbackName, aesKey, globalAesIv, encryptStr)
 end
+
+
+
+
 
 --验证加密cookie是否合法
 function verifySessionCookie()
