@@ -5,13 +5,7 @@ local tools = require "tools"
 local ck = require "resty.cookie"
 local checkState = require "check"['checkState']
 
-function jsonpSay(jsStr)
-	ngx.header["Content-Type"] = 'application/x-javascript';
-	ngx.header['Cache-Control'] = 'nocache';
-	ngx.header['Pragma']= 'no-cache';
-	ngx.header['Expires']= '-1';
-	ngx.say(jsStr)
-end
+
 
 
 function doJsonp()
@@ -25,7 +19,7 @@ function doJsonp()
 		--如果关闭开关或者出错了,或者未用agent请求
 		if gateStateVal == '0' or not cookie or noAgent then
 			local resStr = tools.jsonp('', '')
-			jsonpSay(resStr)
+			tools.jsonpSay(resStr)
 			return
 		end
 
@@ -46,7 +40,6 @@ function doJsonp()
 			value = sessionVal,
 			path = "/",
 			httponly = true,
-			expires = config.sessionExpire,
 			max_age = config.sessionMaxAge
 		})
 
@@ -54,14 +47,14 @@ function doJsonp()
 		if not ok then
 			ngx.log(ngx.ERR, "cookie:set error :" ..err)
 			local resStr = tools.jsonp('', '')
-			jsonpSay(resStr)
+			tools.jsonpSay(resStr)
 			return
 		end
 		
 		
 		--将aes的加密key和已经aes加密串丢入jsonp返回给客户
 		local resStr = tools.jsonp(aesKey, toEncryptStr)
-		jsonpSay(resStr)
+		tools.jsonpSay(resStr)
 		
 		--如果超过1秒, 记录错误日志
 		local dealTime = tools.getNowTs() - enterTime

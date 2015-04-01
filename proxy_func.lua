@@ -13,9 +13,10 @@ function dealProxyPass()
 	local tdcheck = args['_tdcheck']
 	--如果开启了check
 	if tdcheck == '1' then
-		jsonpStr = tools.jsonp('1','1')
-		ngx.say(jsonpStr)
-		return ngx.exit(ngx.HTTP_OK)
+		jsonpStr = tools.jsonp('1','')
+		tools.jsonpSay(jsonpStr)
+		ngx.exit(ngx.HTTP_OK)
+		return
 	end
 
 end
@@ -26,16 +27,39 @@ function erroResponse()
 	--如果开启了check
 	if tdcheck == '1' then
 		jsonpStr = tools.jsonp('0','')
-		ngx.say(jsonpStr)
-		return ngx.exit(ngx.HTTP_OK)
+		tools.jsonpSay(jsonpStr)
+		ngx.exit(ngx.HTTP_OK)
+		return
 	end
 	ngx.exit(400)
 end
 
 
+function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
+
+	local trueDeviceContent = tools.aes128Decrypt(deviceId, aesKey)
+	
+	if not trueDeviceContent then
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt error, deviceId is %s",deviceId))
+		return false, nil
+	end
+	
+	local didIpAgent = trueDeviceContent
+	--检查ip地址是否合法
+	if didIpAgent ~= tools.sha256(remoteIp..config.md5Gap..remoteAgent) then
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid"))
+		return false, nil
+	end
+	
+	return true, nil
+
+end
+
+
 --代理函数
 function doProxy()
-
+	
+	
 	--检查状态
 	local gateStateVal, aesKey, aesSecret, remoteAgent, noAgent = checkState()
 	--如果没有Agent，报错
@@ -66,39 +90,47 @@ function doProxy()
 	local deviceId, err = tools.simpleVerifyDeviceId()
 	if err then
 		return dealProxyPass()
-	end
-	
-	ngx.log(ngx.ERR, '$$$$$$$$$$$$$$$$$$$$$$$$$$$$$'..deviceId)
-	
+	end			
 	if not deviceId or  deviceId == '' then
 		ngx.log(ngx.ERR, string.format("verifyDeviceId not have deviceId"))
 		return erroResponse()
 	end
 	
-	ngx.log(ngx.ERR, '*************************************'..deviceId)
-	--检查deviceId的值是否被篡改
-	local trueDeviceContent = tools.aes128Decrypt(deviceId, aesKey)
-	ngx.log(ngx.ERR, '*************************************'..trueDeviceContent)
-	
-	local didIpAgent = trueDeviceContent
-	--检查ip地址是否合法
-	if didIpAgent ~= tools.sha256(remoteIp..config.md5Gap..remoteAgent) then
-		ngx.log(ngx.ERR, string.format("verifyDeviceId IP and agent not valid"))
-		return erroResponse()
-	end
-
+		
 	--下面进行redis连接后的检查
 	local r, err = conn.conn()
 	if err then
 		--如果连接reids出错
 		return dealProxyPass()
 	end
+	
+	
+	--检查deviceId的值是否被篡改
+	local ok, err = deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
+	--如果deep检查key错误，则要进一步判断是否更改过key
+	if not ok then
+		local lastKey, err = r:get(config.lastGlobalAesKey)
+		if err then
+			return dealProxyPass()
+		end
+		--如果没有lastkey
+		if lastKey == ngx.null or not lastKey then
+			return erroResponse()
+		else
+			local ok, err = deepCheckDeviceId(deviceId, lastKey, remoteIp, remoteAgent)
+			if not ok then
+				ngx.log(ngx.ERR, string.format("deepCheckDeviceId twice still error, deviceid: %s", deviceId))
+				return erroResponse()
+			end
+		end
+	end
+	
 
 	--检查此deviceid是否在黑名单中
 	local blackKey = string.format('black_%s', deviceId)
 	local isBlack = r:get(blackKey)
 	--如果在黑名单中
-	if isBlack then
+	if isBlack ~= ngx.null and isBlack then
 		ngx.log(ngx.ERR, string.format("request in blackList, deviceId %s", deviceId))
 		return erroResponse()
 	end
@@ -107,25 +139,43 @@ function doProxy()
 	local didKey = string.format(config.didKey, deviceId)
 	local dtsKey = string.format(config.dtsKey, deviceId)
 	local dipKey = string.format(config.dipKey, remoteIp)
-
+	
+	ngx.log(ngx.ERR,'********************************'..didKey)
+	
 	--获取上一次请求时间
 	local didTs = r:get(dtsKey)
+	
 	--如果没有找到这个deviceid上次请求的时间,则全部新建
-	if not didTs then
-		r:set(dtsKey, enterTime)
-		r:ltrim(didKey,0,-1)
-		r:lpush(didKey,1)
+	if didTs == ngx.null or not didTs then
+		r:set(dtsKey, enterTime) --设置上次时间戳
+		r:del(didKey)			 --删除片的key
+		r:lpush(didKey,1)		 --新增片
+		
 	else
 		--如果存在上次请求
 		r:set(dtsKey, enterTime)
 		--如果上一次请求在10秒钟之内，最新片+1
 		if enterTime - tonumber(didTs) <= config.freqSec then
-			local count = tonumber(r:lindex(didKey)) + 1
-			r:lset(didKey, 0, count)
+			local newCount = r:lindex(didKey,0)
+			--如果list不存在
+			if newCount == ngx.null or not newCount then
+				newCount = 0
+				--将计数+1
+				local count = newCount + 1
+				r:lpush(didKey, count)
+			else
+				--如果list存在，则把最新片+1
+				newCount = tonumber(newCount)
+				--将计数+1
+				local count = newCount + 1
+				r:lset(didKey, 0, count)
+			end
+			
 		else
+			
 			--如果上一次请求在10秒钟之外,新建一个片
 			r:lpush(didKey,1)
-			r:ltrim(didKey, config.freqShard, -1)
+			r:ltrim(didKey, 0, config.freqShard)
 		end
 	end
 
@@ -135,10 +185,11 @@ function doProxy()
 	tempSum = 0
 	for i = 1, config.freqShard, 1 do
 		--记录每个分片的求和
-		tempSum = tempSum + tonumber(didCountList[i])
+		tempSum = tempSum + tonumber(didCountList[i] or 0)
+				
 		--当满足规则时，表示请求过于频繁
 		if config.freqRule[i] ~= -1 and  tempSum >= config.freqRule[i] then
-			ngx.log(ngx.ERR, string.format("request too freqency, deviceId %s", deviceId))
+			ngx.log(ngx.ERR, string.format("request too freqency, deviceId %s, rule: %s", deviceId, i))
 			return erroResponse()
 		end
 	end
@@ -150,7 +201,9 @@ function doProxy()
 	r:expire(dtsKey, 600)
 	r:expire(didKey, 600)
 	r:expire(dipKey, 3600)
-
+	
+	--执行proxy
+	dealProxyPass()
 	--记录时间，进行转发
 	--如果超过1秒, 记录错误日志
 	local dealTime = tools.getNowTs() - enterTime

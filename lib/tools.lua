@@ -59,9 +59,15 @@ end
 
 --jsonp方法返回
 function jsonp(aesKey, encryptStr)
+	local globalAesIv = config.globalAesIv
+	--如果aeskey是空，则都返回空或者'0'
+	if aesKey == '' or aesKey == '0' or aesKey == '1' then
+		globalAesIv = ''
+		encryptStr = ''
+	end
 	local args = ngx.req.get_uri_args()
 	local callbackName = args['callback'] or 'callback'
-	return string.format(';%s(["%s","%s","%s"]);', callbackName, aesKey, config.globalAesIv, encryptStr)
+	return string.format(';%s(["%s","%s","%s"]);', callbackName, aesKey, globalAesIv, encryptStr)
 end
 
 --验证加密cookie是否合法
@@ -74,9 +80,10 @@ function verifySessionCookie()
 	local sessionVal, err = cookie:get(config.sessionName)
 	--出错了
 	if err then
-		return nil, err
+		ngx.log(ngx.ERR, string.format("verifySessionCookie get cookie err: %s", err))
+		return false, nil
 	end
-	if not sessionVal or sessionVal == '' then
+	if sessionVal == ngx.null or  not sessionVal or sessionVal == '' then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie not have sessionVal"))
 		return false, nil
 	end
@@ -115,5 +122,12 @@ function simpleVerifyDeviceId()
 end
 
 
+function jsonpSay(jsStr)
+	ngx.header["Content-Type"] = 'application/x-javascript';
+	ngx.header['Cache-Control'] = 'nocache';
+	ngx.header['Pragma']= 'no-cache';
+	ngx.header['Expires']= '-1';
+	ngx.say(jsStr)
+end
 
 
