@@ -1,7 +1,6 @@
 module("tools", package.seeall)
 
 require "ngx" --ngx库
-require "ndk"
 
 local ck = require "resty.cookie"
 local resty_sha256 = require "resty.sha256"
