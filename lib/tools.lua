@@ -10,6 +10,11 @@ local str = require "resty.string"
 local config = require "config"
 
 
+
+function trim(s)
+    return s:gsub("^%s*(.-)%s*$", "%1")
+end
+
 --获得当前时间戳
 function getNowTs()
 	return tonumber(os.time())

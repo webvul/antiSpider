@@ -6,6 +6,9 @@ local tools = require "tools"
 local conn = require "redis_conn"
 
 
+KEY_URL = "/td/key?callback=callback"
+CHECK_URL = '/?_tdcheck=1'
+
 function trim(s)
     return s:gsub("^%s*(.-)%s*$", "%1")
 end
@@ -19,6 +22,7 @@ do
 	local res, err = r:get('test')
 	assert(not err)
 	assert(res, '1')
+	conn.close(r)
 	ngx.say('redis 连接测试 OK')
 end
 
@@ -52,218 +56,57 @@ end
 
 
 
---测试生成key的方法
-do   
-
+--测试生成key的方法和check方法
+do
+	local r, err = conn.conn()
 	
+	local res = ngx.location.capture(KEY_URL,{method=ngx.HTTP_GET})
+	local code = res.status
+	assert(code==400)
+	
+
+	r:set(config.globalStateKey, '0')
+	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
+	local res = ngx.location.capture(KEY_URL,{method=ngx.HTTP_GET})
+	local code = res.status
+	local data = trim(res.body)
+	assert(code==200)
+	assert('body', ';callback(["","",""]);')
+	
+	
+	
+	r:set(config.globalStateKey, '1')
+	r:set(config.globalAesKey, '12345678901234567890123456789012')
+	local ipAndAgent = tools.sha256('127.0.0.1'..config.md5Gap..'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36')
+	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
+	local res = ngx.location.capture(KEY_URL,{method=ngx.HTTP_GET})
+	local code = res.status
+	local data = trim(res.body)
+	assert(code==200)
+	assert('body', ';callback(["12345678901234567890123456789012","'..config.globalAesIv..'","'..ipAndAgent..'"]);')
+	local cookieVal = res.header['Set-Cookie']
+	local p = string.find(cookieVal, 'td_ssid=')
+	assert(p)
+	local p = string.find(cookieVal, 'ax-Age=86400; Path=/; HttpOnly')
+	assert(p)
+	
+	ngx.say('key 生成方法测试 OK')
+	conn.close(r)
+end
+
+
+--测试代理功能是否可用
+do
+	local r, err = conn.conn()
+	
+	
+	
+	ngx.say('proxy 方法测试 OK')
+	conn.close(r)
 end
 
 
 
-
-do   --发送不存在的sign请求
-
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_POST, body="aaa=111"})
-
-
-local code = res.status
-local data = trim(res.body)
-
-
---ngx.log(ngx.ERR, cjson.encode(res))
-
-
-ngx.say("code == 400 : "..tostring(assert(code==400)))
-local str = '{"result":false,"request":"\\/api\\/Messages\\/SendSms\\/","error_code":-10003,"error":"sign not given"}'
-ngx.say('data == '.. str ..' : ' .. tostring(assert(data == str)))
-ngx.say('发送不存在的sign请求，测试完毕')
-
-
-end
-
-
-
-
-do   --发送不存在的client_id请求
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_POST, body="sign=111"})
-
-
-local code = res.status
-local data = trim(res.body)
-
-ngx.say("code == 400 : "..tostring(assert(code==400)))
-local str = '{"result":false,"request":"\\/api\\/Messages\\/SendSms\\/","error_code":-10005,"error":"client_id not given"}'
-ngx.say('data == '.. str ..' : ' .. tostring(assert(data == str)))
-ngx.say('发送不存在的client_id请求，测试完毕')
-
-end
-
-
-
-
-
-do   --发送无效的client_id请求
-
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_POST, body="sign=111&client_id=aaa"})
-
-local code = res.status
-local data = trim(res.body)
-
-
-ngx.say("code == 401 : "..tostring(assert(code==401)))
-local str = '{"result":false,"request":"\\/api\\/Messages\\/SendSms\\/","error_code":-10006,"error":"client_id not Authorize"}'
-
-ngx.say('data == '.. str ..' : ' .. tostring(assert(data == str)))
-ngx.say('发送无效的client_id请求，测试完毕')
-
-
-end
-
-
-
-do   --使用GET方式发送
-
-
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_GET})
-
-local code = res.status
-local data = trim(res.body)
-
-ngx.say("code == 400 : "..tostring(assert(code==400)))
-local str = '{"result":false,"request":"\\/api\\/Messages\\/SendSms\\/","error_code":-10010,"error":"method not allowed"}'
-ngx.say('data == '.. str ..' : ' .. tostring(assert(data == str)))
-ngx.say('使用GET方式发送，测试完毕')
-
-
-
-end
-
-
-
-do   --发送错误的sign签名
-
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_POST, body="sign=111&client_id=test1"})
-
-local code = res.status
-local data = trim(res.body)
-
-
-ngx.say("code == 401 : "..tostring(assert(code==401)))
-local str = '{"result":false,"request":"\\/api\\/Messages\\/SendSms\\/","error_code":-10004,"error":"invalid sign"}'
-ngx.say('data == '.. str ..' : ' .. tostring(assert(data == str)))
-ngx.say('发送错误的sign签名，测试完毕')
-
-
-end
-
-
-do   --转发ip地址
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_POST, body=DEFAULT_FORM_STR})
-
-local code = res.status
-local data = trim(res.body)
-
-ngx.say("code == 503 or 200 : "..tostring(assert(code==503 or code==200)))
-ngx.say('转发ip地址，测试完毕')
-
-end
-
-
-
-do   --使用json发送数据
-ngx.req.set_header("Content-Type", "application/json")
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_POST, body=DEFAULT_JSON_STR})
-
-local code = res.status
-local data = trim(res.body)
-
---ngx.log(ngx.ERR, cjson.encode(res))
-
-ngx.say("code == 503 or 200 : "..tostring(assert(code==503 or code==200)))
-ngx.say('使用json发送数据，测试完毕')
-
-end
-
-
-do   --错误的json发送数据
-
-ngx.req.set_header("Content-Type", "application/json")
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_POST, body=DEFAULT_JSON_STR.."12312312"})
-
-local code = res.status
-local data = trim(res.body)
-
-ngx.log(ngx.ERR, cjson.encode(res))
-
-
-ngx.say("code == 400 : "..tostring(assert(code==400)))
-local str = '{"result":false,"request":"\\/api\\/Messages\\/SendSms\\/","error_code":-10013,"error":"param error"}'
-ngx.say('data == '.. str ..' : ' .. tostring(assert(data == str)))
-ngx.say('错误的json发送数据，测试完毕')
-
-end
-
-
-
-do   --错误的x-www-form发送数据
-
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-local res = ngx.location.capture(DEFAULT_URL,{method=ngx.HTTP_POST, body=DEFAULT_JSON_STR})
-
-local code = res.status
-local data = trim(res.body)
-
-ngx.log(ngx.ERR, cjson.encode(res))
-
-
-ngx.say("code == 400 : "..tostring(assert(code==400)))
-local str = '{"result":false,"request":"\\/api\\/Messages\\/SendSms\\/","error_code":-10003,"error":"sign not given"}'
-ngx.say('data == '.. str ..' : ' .. tostring(assert(data == str)))
-ngx.say('错误的x-www-form发送数据，测试完毕')
-
-end
-
-
-do   --重建缓存
-
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-local res = ngx.location.capture("/rebuild",{method=ngx.HTTP_GET})
-
-local code = res.status
-local data = trim(res.body)
-
-
-ngx.say("code == 200 : "..tostring(assert(code==200)))
-local str = 'rebuild cache success'
-ngx.say('data == '.. str ..' : ' .. tostring(assert(data == str)))
-ngx.say('重建缓存，测试完毕')
-
-end
-
-
-do   --后端服务器
-
-ngx.req.set_header("Content-Type", "application/x-www-form-urlencoded")
-local res = ngx.location.capture("/status",{method=ngx.HTTP_GET})
-
-local code = res.status
-local data = trim(res.body)
-
-
-ngx.say("code == 200 : "..tostring(assert(code==200)))
-assert(data ~= "")
-ngx.say('后端服务器状态，测试完毕')
-
-end
 
 ngx.say('所有测试完毕')
 ngx.exit(ngx.HTTP_OK)

@@ -12,12 +12,16 @@ function doJsonp()
 		--检查状态
 		local gateStateVal, aesKey, aesSecret, remoteAgent, noAgent = checkState()
 		
+		if noAgent then
+			ngx.exit(400)
+			return
+		end
 
 		--生成cookie
 		local cookie, err = ck:new()
 
 		--如果关闭开关或者出错了,或者未用agent请求
-		if gateStateVal == '0' or not cookie or noAgent then
+		if gateStateVal == '0' or not cookie then
 			local resStr = tools.jsonp('', '')
 			tools.jsonpSay(resStr)
 			return
