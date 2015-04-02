@@ -64,9 +64,20 @@ function aes128Decrypt(encryptedStrParm, frontAesKey)
 	local digest = md5:final()
 	local aes_iv_val = digest
 	
+	--ngx.log(ngx.ERR, string.format("##################_%s",encryptedStrParm))
+	--ngx.log(ngx.ERR, string.format("##################_%s",ngx.decode_base64(encryptedStrParm)))
+	--ngx.log(ngx.ERR, string.format("##################_%s",frontAesKey))
+		
 	local aes_iv = aes:new(aes_iv_key, nil, aes.cipher(128,"cbc"), {iv=aes_iv_val})
-	local decryptStr = aes_iv:decrypt(ngx.decode_base64(encryptedStrParm)) or ''
+	local decryptStr 
 	
+	local status, err = pcall(function() decryptStr = aes_iv:decrypt(ngx.decode_base64(encryptedStrParm)) or '' end)
+			
+	if err then
+		ngx.log(ngx.ERR, string.format("aes128Decrypt Decrypt error: %s, encryptedStrParm:%s",err,encryptedStrParm))
+		return false
+	end
+		
 	return decryptStr
 
 end
@@ -102,9 +113,10 @@ function verifySessionCookie()
 		return nil, err
 	end
 	local sessionVal, err = cookie:get(config.sessionName)
+	
 	--出错了
 	if err then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie get cookie err: %s", err))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie get cookie err: %s,  or no cookie name: %s", err, config.sessionName))
 		return false, nil
 	end
 	if sessionVal == ngx.null or  not sessionVal or sessionVal == '' then
@@ -136,12 +148,18 @@ function simpleVerifyDeviceId()
 		return nil, err
 	end
 	local deviceId, err = cookie:get(config.deviceIdCookieName)
-	deviceId = ngx.unescape_uri(deviceId)
+	--出错了
+	if err then
+		ngx.log(ngx.ERR, string.format("simpleVerifyDeviceId get cookie err: %s,  or no cookie name: %s", err, config.deviceIdCookieName))
+		return false, nil
+	end
+	--判断deviceid是否存在
 	if not deviceId or deviceId == '' then
+		ngx.log(ngx.ERR, string.format("verifyDeviceId not have deviceId"))
 		return false, nil
 	else
-		
-		return deviceId or ''
+		deviceId = ngx.unescape_uri(deviceId)
+		return deviceId
 	end
 end
 

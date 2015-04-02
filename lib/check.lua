@@ -3,6 +3,8 @@ module("check", package.seeall)
 require "cjson"	--cjson库
 require "ngx" --ngx库
 local ipWhiteList = require "config"["ipWhiteList"]
+local blackAgent = require "config"["blackAgent"]
+local config = require "config"
 local conn = require "redis_conn"
 local tools = require "tools"
 
@@ -12,10 +14,22 @@ function checkState()
 	local remoteAgent = tools.trim(ngx.req.get_headers()['User-Agent'] or '')
 	
 	if not remoteAgent or remoteAgent == '' then
-		--如果没有agent,多返回一个参数noAgent为true
+	--如果没有agent,多返回一个参数noAgent为true，出错并记录
+		ngx.log(ngx.ERR, string.format("checkState not have  User-Agent"))
 		return '0', '', nil, '', true
 	end
 
+
+	for i=1, #(blackAgent) do
+		local res, _ = string.find(remoteAgent, blackAgent[i])
+		--表示有敏感的agent,出错并记录
+		if res ~= nil then
+			ngx.log(ngx.ERR, string.format("checkState User-Agent have :%s, User-Agent: %s", blackAgent[i], remoteAgent))
+			return '0', '', nil, '', true
+		end
+	end 
+	
+	
 	--检查缓存
 	local r, err = conn.conn()
 	--如果连接reids出错

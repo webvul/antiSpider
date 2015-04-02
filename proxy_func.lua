@@ -45,7 +45,7 @@ end
 
 
 function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
-
+		
 	local trueDeviceContent = tools.aes128Decrypt(deviceId, aesKey)
 	
 	if not trueDeviceContent then
@@ -53,9 +53,12 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 		return false, nil
 	end
 	
+	
+	
 	local didIpAgent = trueDeviceContent
 	--检查ip地址是否合法
 	if didIpAgent ~= tools.sha256(remoteIp..config.md5Gap..remoteAgent) then
+		--ngx.log(ngx.ERR, string.format("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$__%s,%s",remoteIp,remoteAgent))
 		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid"))
 		return false, nil
 	end
@@ -67,8 +70,7 @@ end
 
 --代理函数
 function doProxy()
-	
-	
+		
 	--检查状态
 	local gateStateVal, aesKey, aesSecret, remoteAgent, noAgent = checkState()
 	--如果没有Agent，报错
@@ -82,7 +84,7 @@ function doProxy()
 
 	--定义变量
 	local enterTime = tools.getNowTs()
-	local remoteIp = ngx.var.remote_addr
+	local remoteIp = ngx.var.remote_addr or '127.0.0.1'
 	local remoteAgent = remoteAgent
 
 	--判断sessioncookie是否有效
@@ -101,7 +103,6 @@ function doProxy()
 		return dealProxyPass()
 	end			
 	if not deviceId or  deviceId == '' then
-		ngx.log(ngx.ERR, string.format("verifyDeviceId not have deviceId"))
 		return erroResponse()
 	end
 	
@@ -112,6 +113,9 @@ function doProxy()
 		--如果连接reids出错
 		return dealProxyPass()
 	end
+	
+
+	
 	
 	
 	--检查deviceId的值是否被篡改
