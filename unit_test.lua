@@ -405,7 +405,6 @@ do
 	
 	
 	--ɨβ
-	r:flushdb()
 	conn.close(r)
 end
 
