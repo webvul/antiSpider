@@ -313,7 +313,7 @@ do
 	
 	
 	
-	--有td_sid，有td_did，不合法，ip和agent匹配，通过,计数器+1
+	--有td_sid，有td_did，合法，ip和agent匹配，通过,计数器+1
 	ngx.log(ngx.ERR, string.format("**************************proxy pass 2 ***********************"))
 
 	local httpc = http.new()
@@ -337,10 +337,42 @@ do
 	
 	
 	
+	--有td_sid，有td_did，合法，使用的是老的key通过，ip和agent匹配，通过,计数器+1
+	ngx.log(ngx.ERR, string.format("**************************proxy pass use last key ***********************"))
+	
+	local globalAesKeyOld = '302702db952acfa2beb0563ded2da35a'
+	local globalAesKeyNew = 'eeae72cc9b4574153aae686df5b4afa9'
+	
+	r:set(config.globalAesKey, globalAesKeyNew)
+	r:set(config.lastGlobalAesKey, globalAesKeyOld)
+	
+		
+	local httpc = http.new()
+	local res, err = httpc:request_uri(string.format("http://127.0.0.1%s", CHECK_URL), {
+        method = "GET",
+        headers = {
+          ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal}
+        }
+    })
+
+	local code = res.status
+	local data = trim(res.body)
+	assert(code==ngx.HTTP_OK)
+	assert(data==';callback(["1","",""]);')
+	local count = r:lindex(string.format(config.didKey,didCookie2), 0)
+	assert(tonumber(count)==3)
+	local lastTs = r:get(string.format(config.dtsKey,didCookie2))
+	assert(tonumber(lastTs))
+	
+	
+	
+	ngx.sleep(1)
 	
 	
 	--有td_sid，有td_did，不合法，ip和agent匹配，通过,计数器+1，但是由于频率过高，被挡了400
 	ngx.log(ngx.ERR, string.format("**************************proxy count too max ***********************"))
+	
 	r:lset(string.format(config.didKey,didCookie2), 0, 9999)
 	
 	local httpc = http.new()
@@ -353,12 +385,14 @@ do
     })
 	
 	
-	
 	local code = res.status
 	local data = trim(res.body)
+	
+	
 	assert(code==ngx.HTTP_BAD_REQUEST)
 	
 	local count = r:lindex(string.format(config.didKey,didCookie2), 0)
+	
 	assert(tonumber(count)==10000)
 	local lastTs = r:get(string.format(config.dtsKey,didCookie2))
 	assert(tonumber(lastTs))
@@ -367,6 +401,11 @@ do
 	
 	
 	ngx.say('proxy 方法测试 OK')
+	
+	
+	
+	--扫尾
+	r:flushdb()
 	conn.close(r)
 end
 
