@@ -9,17 +9,20 @@ local conn = require "redis_conn"
 local tools = require "tools"
 
 function checkState()
-
-	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
-	local remoteAgent = tools.trim(ngx.req.get_headers()['User-Agent'] or '')	
 	
+	local ngxHeader = ngx.req.get_headers() or {}
+	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
+	local remoteAgent = tools.trim(ngxHeader['User-Agent'] or '')
+	local referer = tools.trim(ngxHeader['referer'] or ngxHeader['referrer'] or '')
+	
+	--检查agent
 	if not remoteAgent or remoteAgent == '' then
 	--如果没有agent,多返回一个参数noAgent为true，出错并记录
 		ngx.log(ngx.ERR, string.format("checkState not have  User-Agent"))
 		return '0', '', nil, '', true
 	end
-
-
+	
+	--检查agent
 	for i=1, #(blackAgent) do
 		local res, _ = string.find(remoteAgent, blackAgent[i])
 		--表示有敏感的agent,出错并记录
@@ -28,6 +31,29 @@ function checkState()
 			return '0', '', nil, '', true
 		end
 	end 
+	
+	--检查referrer
+	if not referer or referer == '' then
+		--如果没有referer,出错记录
+		ngx.log(ngx.ERR, string.format("checkState not have referer or referrer"))
+		return '0', '', nil, '', true
+	end
+	
+	--检查referrer
+	local refererFound = 0
+	for i=1,#(config.referrerList) do
+		local pos, _ = string.find(referer, config.referrerList[i],1,true)
+		if pos and pos >= 1 then
+			refererFound = refererFound + 1
+			break
+		end
+	end
+	if refererFound == 0 then
+		ngx.log(ngx.ERR, string.format("checkState referer not in white list"))
+		return '0', '', nil, '', true
+	end
+
+	
 	
 	
 	--检查缓存

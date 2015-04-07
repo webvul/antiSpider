@@ -89,10 +89,29 @@ do
 	local code = res.status
 	assert(code==ngx.HTTP_BAD_REQUEST)
 	
+	
+	--测试referrer 没有 referrer
+	ngx.log(ngx.ERR, string.format("###################### no referrer #########################"))
+	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
+	ngx.req.set_header("referrer", "")
+	local res = ngx.location.capture(KEY_URL,{method=ngx.HTTP_GET})
+	local code = res.status
+	assert(code==ngx.HTTP_BAD_REQUEST)
+	
+	--测试referrer 无效的 referrer
+	ngx.log(ngx.ERR, string.format("###################### invalid referrer #########################"))
+	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
+	ngx.req.set_header("referrer", "http://www.baidu.com/")
+	local res = ngx.location.capture(KEY_URL,{method=ngx.HTTP_GET})
+	local code = res.status
+	assert(code==ngx.HTTP_BAD_REQUEST)
+	
+	
 	--测试开关
 	ngx.log(ngx.ERR, string.format("###################### key state key #########################"))
 	r:set(config.globalStateKey, '0')
 	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
+	ngx.req.set_header("referrer", "http://127.0.0.1/")
 	local res = ngx.location.capture(KEY_URL,{method=ngx.HTTP_GET})
 	local code = res.status
 	local data = trim(res.body)
@@ -106,6 +125,7 @@ do
 	r:set(config.globalAesKey, '12345678901234567890123456789012')
 	local ipAndAgent = tools.sha256('127.0.0.1'..config.md5Gap..'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36')
 	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
+	ngx.req.set_header("referer", "http://127.0.0.1/")
 	local res = ngx.location.capture(KEY_URL,{method=ngx.HTTP_GET})
 	local code = res.status
 	local data = trim(res.body)
@@ -133,6 +153,7 @@ do
 	--无agent
 	ngx.log(ngx.ERR, string.format("**************************proxy no agent ***********************"))
 	ngx.req.set_header("User-Agent", "")
+	ngx.req.set_header("referrer", "http://127.0.0.1/")
 	local res = ngx.location.capture(CHECK_URL_NO_JSONP,{method=ngx.HTTP_GET})
 	local code = res.status
 	assert(code==ngx.HTTP_BAD_REQUEST)
@@ -140,11 +161,13 @@ do
 	--无cookie
 	ngx.log(ngx.ERR, string.format("**************************proxy no cookie ***********************"))
 	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
+	ngx.req.set_header("referrer", "http://127.0.0.1/")
 	local httpc = http.new()
 	local res, err = httpc:request_uri(string.format("http://127.0.0.1%s", CHECK_URL_NO_JSONP), {
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 	
@@ -161,8 +184,9 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = string.format("%s=%s; path=/",config.sessionName, '123213213232121')
-        }
+		  ["Cookie"] = string.format("%s=%s; path=/",config.sessionName, '123213213232121'),
+		  ["referrer"] = 'http://127.0.0.1/',
+		}
     })
 	local code = res.status
 	assert(code==ngx.HTTP_BAD_REQUEST)
@@ -179,7 +203,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = string.format("%s=%s; path=/",config.sessionName, cookieSidVal)
+		  ["Cookie"] = string.format("%s=%s; path=/",config.sessionName, cookieSidVal),
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 	
@@ -203,7 +228,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format(globalCookieVal)}
+		  ["Cookie"] = {string.format(globalCookieVal)},
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 	
@@ -219,7 +245,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format('%s=%s', config.deviceIdCookieName, '123213232132131'), globalCookieVal}
+		  ["Cookie"] = {string.format('%s=%s', config.deviceIdCookieName, '123213232132131'), globalCookieVal},
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 
@@ -245,7 +272,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal}
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal},
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 
@@ -273,7 +301,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal}
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal},
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 	--ngx.log(ngx.ERR, string.format("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$__%s", res.status))
@@ -293,7 +322,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal}
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal},
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 
@@ -321,7 +351,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal}
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal},
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 
@@ -352,7 +383,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal}
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal},
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 
@@ -380,7 +412,8 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal}
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal},
+		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
 	
