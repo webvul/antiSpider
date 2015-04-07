@@ -11,7 +11,7 @@ local tools = require "tools"
 function checkState()
 
 	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
-	local remoteAgent = tools.trim(ngx.req.get_headers()['User-Agent'] or '')
+	local remoteAgent = tools.trim(ngx.req.get_headers()['User-Agent'] or '')	
 	
 	if not remoteAgent or remoteAgent == '' then
 	--如果没有agent,多返回一个参数noAgent为true，出错并记录
