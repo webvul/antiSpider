@@ -8,7 +8,7 @@ function conn()
 		
 	--直接连接
 	local r = redis:new()
-	r:set_timeout(1000) -- 1 second
+	r:set_timeout(2000) -- 2 second
 	local ok, err = r:connect(RedisConn.host, RedisConn.port)
 	
 	if not ok then
