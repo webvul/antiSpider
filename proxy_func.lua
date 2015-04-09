@@ -110,6 +110,7 @@ function doProxy()
 	--下面进行redis连接后的检查
 	local r, err = conn.conn()
 	if err then
+		ngx.log(ngx.ERR, string.format("doProxy redis connect r:get(config.globalAesKey) error %s", err))
 		--如果连接reids出错
 		return dealProxyPass()
 	end
@@ -124,6 +125,7 @@ function doProxy()
 	if not ok then
 		local lastKey, err = r:get(config.lastGlobalAesKey)
 		if err then
+			ngx.log(ngx.ERR, string.format("doProxy redis connect r:get(config.lastGlobalAesKey) error %s", err))
 			return dealProxyPass(r)
 		end
 		--如果没有lastkey

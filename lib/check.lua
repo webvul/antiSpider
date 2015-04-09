@@ -60,6 +60,7 @@ function checkState()
 	local r, err = conn.conn()
 	--如果连接reids出错
 	if err then
+		ngx.log(ngx.ERR, string.format("checkState redis connect error %s", err))
 		return '0', '', nil
 	end
 
@@ -67,6 +68,7 @@ function checkState()
 	local gateStateVal, err = r:get(config.globalStateKey) or '0'
 	--如果连接reids出错
 	if err then
+		ngx.log(ngx.ERR, string.format("checkState redis connect gateStateVal error %s", err))
 		return '0', '', nil
 	end	
 	--如果redis没有找到，则关闭,redis返回的nil必须使用ngx.null
@@ -78,6 +80,7 @@ function checkState()
 	local aesKey, err = r:get(config.globalAesKey) or ''
 	--如果连接reids出错
 	if err then
+		ngx.log(ngx.ERR, string.format("checkState redis connect r:get(config.globalAesKey) error %s", err))
 		return '0', '', nil
 	end
 	if aesKey == ngx.null or aesKey == '' then
