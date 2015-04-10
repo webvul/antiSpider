@@ -22,7 +22,25 @@
 <script>
 $(function(){
 	
-
+	var checkState = function(){
+		$.ajax({
+			'url':'/',
+			'data':{'_tdcheck':1},
+			'dataType':'jsonp',
+			'jsonp':'callback',
+			'success':function(data){
+					alert('result:'+data[0])
+					if(data[0] == '1'){
+						alert('检查成功')
+					}
+					else{
+						alert('检查失败')
+					}
+					
+				}
+			})
+	
+	}
 	
 	var getKey = function(){
 		$.ajax({
@@ -50,6 +68,7 @@ $(function(){
 					$('#info').append(encrypted.toString())
 					
 					alert('set cookie success')
+					checkState()
 				}
 			})
 	}
@@ -61,6 +80,7 @@ $(function(){
 	}
 	else{
 		$('#info').append(did)
+		checkState()
 	}
 	
 

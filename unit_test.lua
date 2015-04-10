@@ -27,9 +27,16 @@ do
 	assert(not err)
 	assert(res, '1')
 	
+	
+	
+	
 	--清楚所有的key
 	r:flushdb()
 
+	
+	r:set(config.globalStateKey, '1')
+	r:set(config.globalAesKey, '302702db952acfa2beb0563ded2da35a')
+	r:set(config.lastGlobalAesKey, '302702db952acfa2beb0563ded2da35a')
 	
 	conn.close(r)
 	ngx.say('redis 连接测试 OK')
@@ -63,7 +70,29 @@ do
 	assert(jsonpStr,';callback(["1","",""]);')
 	local jsonpStr = tools.jsonp('49a0a981c3b37aab2c480510653690a5','123','callback')
 	assert(jsonpStr,';callback(["49a0a981c3b37aab2c480510653690a5","'..config.globalAesIv..'","123"]);')
-		
+	
+	
+	
+	
+	
+	--测试重建缓存的功能
+	local cachDict = ngx.shared.cachDict
+	cachDict:set('lastUpdateTs', '0')
+	local result = tools.rebuildCacheDict()
+	assert(result)
+	assert(cachDict:get(config.globalStateKey))
+	assert(cachDict:get(config.globalAesKey))
+	assert(cachDict:get(config.lastGlobalAesKey))
+	assert(cachDict:get('lastUpdateTs'))
+	
+	--测试强制关闭系统
+	cachDict:set(config.globalStateKey, '1')
+	tools.forceCloseSystem()
+	assert(cachDict:get(config.globalStateKey), '0')
+	
+	--恢复开关
+	cachDict:set(config.globalStateKey, '1')
+	
 	ngx.say('tools 方法测试 OK')
 end
 
@@ -73,6 +102,7 @@ local globalCookieVal
 --测试生成key的方法和check方法
 do
 	local r, err = conn.conn()
+	local cachDict = ngx.shared.cachDict
 	
 	--测试check
 	ngx.log(ngx.ERR, string.format("###################### key no agent #########################"))
@@ -110,6 +140,10 @@ do
 	--测试开关
 	ngx.log(ngx.ERR, string.format("###################### key state key #########################"))
 	r:set(config.globalStateKey, '0')
+	--设置之后重建缓存
+	cachDict:set('lastUpdateTs', '0')
+	local result = tools.rebuildCacheDict()
+	
 	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
 	ngx.req.set_header("referrer", "http://127.0.0.1/")
 	local res = ngx.location.capture(KEY_URL,{method=ngx.HTTP_GET})
@@ -123,6 +157,10 @@ do
 	ngx.log(ngx.ERR, string.format("###################### key pass #########################"))
 	r:set(config.globalStateKey, '1')
 	r:set(config.globalAesKey, '12345678901234567890123456789012')
+	--设置之后重建缓存
+	cachDict:set('lastUpdateTs', '0')
+	local result = tools.rebuildCacheDict()
+	
 	local ipAndAgent = tools.sha256('127.0.0.1'..config.md5Gap..'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36')
 	ngx.req.set_header("User-Agent", "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36")
 	ngx.req.set_header("referer", "http://127.0.0.1/")
@@ -149,6 +187,7 @@ end
 --测试代理功能是否可用
 do
 	local r, err = conn.conn()
+	local cachDict = ngx.shared.cachDict
 	
 	--无agent
 	ngx.log(ngx.ERR, string.format("**************************proxy no agent ***********************"))
@@ -213,7 +252,7 @@ do
 	assert(code==ngx.HTTP_BAD_REQUEST)
 	
 	
-	
+	ngx.sleep(1)
 	
 	--有td_sid，无td_did
 	local nowTs = tostring(tools.getNowTs())
@@ -254,12 +293,14 @@ do
 	assert(code==ngx.HTTP_BAD_REQUEST)
 	
 		
-	
-	
 	--有td_sid，有td_did，不合法，ip和agent不匹配
 	ngx.log(ngx.ERR, string.format("**************************proxy td_did ip agent not valid ***********************"))
 	local globalAesKey = '302702db952acfa2beb0563ded2da35a'
 	r:set(config.globalAesKey, globalAesKey)
+	--设置之后重建缓存
+	cachDict:set('lastUpdateTs', '0')
+	local result = tools.rebuildCacheDict()
+	
 	local remoteIp = '127.0.0.1'
 	local remoteAgent = 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.1; WOW64; Trident/6.0; QQBrowser/8.0.3345.400)'
 	local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent)
@@ -280,7 +321,7 @@ do
 	local code = res.status
 	assert(code==ngx.HTTP_BAD_REQUEST)
 	
-	
+	ngx.sleep(1)
 	
 	--有td_sid，有td_did，不合法，ip和agent匹配，但是在黑名单中
 	ngx.log(ngx.ERR, string.format("**************************proxy in blak list ***********************"))
@@ -311,7 +352,7 @@ do
 	r:del(string.format('black_%s',didCookie2))
 	
 	
-	
+	ngx.sleep(1)
 	
 	
 	--有td_sid，有td_did，合法，ip和agent匹配，通过
@@ -340,7 +381,7 @@ do
 	assert(tonumber(lastTs))
 	
 	
-	
+	ngx.sleep(1)
 	
 	
 	--有td_sid，有td_did，合法，ip和agent匹配，通过,计数器+1
@@ -365,7 +406,7 @@ do
 	local lastTs = r:get(string.format(config.dtsKey,didCookie2))
 	assert(tonumber(lastTs))
 	
-	
+	ngx.sleep(1)
 	
 	
 	--有td_sid，有td_did，合法，使用的是老的key通过，ip和agent匹配，通过,计数器+1
@@ -376,7 +417,9 @@ do
 	
 	r:set(config.globalAesKey, globalAesKeyNew)
 	r:set(config.lastGlobalAesKey, globalAesKeyOld)
-	
+	--设置之后重建缓存
+	cachDict:set('lastUpdateTs', '0')
+	local result = tools.rebuildCacheDict()
 		
 	local httpc = http.new()
 	local res, err = httpc:request_uri(string.format("http://127.0.0.1%s", CHECK_URL), {

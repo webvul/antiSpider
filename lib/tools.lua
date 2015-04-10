@@ -8,6 +8,8 @@ local resty_md5 = require "resty.md5"
 local aes = require "resty.aes"
 local str = require "resty.string"
 local config = require "config"
+local conn = require "redis_conn"
+require "cjson"	--cjson库
 
 
 
@@ -171,5 +173,97 @@ function jsonpSay(jsStr)
 	ngx.header['Expires']= '-1';
 	ngx.say(jsStr)
 end
+
+--重建所有缓存
+function rebuildCacheDict()
+	local cachDict = ngx.shared.cachDict
+	local lastUpdateTs = tonumber(cachDict:get('lastUpdateTs') or 0)
+	local nowTs = getNowTs()
+	
+	--配置失效时间小于10分钟,则不去更新更新缓存
+	if nowTs - lastUpdateTs < 60*10 then
+		ngx.log(ngx.INFO, string.format("rebuildCacheDict kiss cache"))
+		return true
+	end
+	
+	--大于10分钟后，就开始重建缓存了
+	--打开redis连接
+	local r, err = conn.conn()
+	if err then
+		ngx.log(ngx.ERR, string.format("tools rebuildCacheDict redis connect error %s", err))
+		--如果连接reids出错
+		return false
+	end
+	
+	--全局状态
+	local gateStateVal, err = r:get(config.globalStateKey) or '0'
+	--如果连接reids出错
+	if err then
+		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis connect gateStateVal error %s", err))
+		return false
+	end	
+	--如果redis没有找到，则关闭,redis返回的nil必须使用ngx.null
+	if gateStateVal == ngx.null or not gateStateVal or gateStateVal == '' then
+		gateStateVal = '0'
+	end
+	
+	
+	
+	local aesKey, err = r:get(config.globalAesKey) or ''
+	--如果连接reids出错
+	if err then
+		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis connect r:get(config.globalAesKey) error %s", err))
+		return false
+	end
+	if aesKey == ngx.null or aesKey == '' then
+		gateStateVal = '0'
+		aesKey = ''
+	end
+	
+	
+	--上一个key缓存
+	local lastAesKey, err = r:get(config.lastGlobalAesKey) or ''
+	--如果连接reids出错
+	if err then
+		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis connect r:get(config.lastGlobalAesKey) error %s", err))
+		return false
+	end
+	if lastAesKey == ngx.null or lastAesKey == '' then
+		ngx.log(ngx.ERR, string.format("rebuildCacheDict lastAesKey is empty"))
+		lastAesKey = ''
+	end
+	
+	
+	--更新缓存，更新缓存时间戳
+	cachDict:set(config.globalStateKey, gateStateVal)
+	cachDict:set(config.globalAesKey, aesKey)
+	cachDict:set(config.lastGlobalAesKey, lastAesKey)
+	cachDict:set('lastUpdateTs', tostring(nowTs))
+	
+	
+	--关闭redis链接
+	conn.close(r)
+	
+	ngx.log(ngx.INFO, string.format("rebuildCacheDict rebuild cache success"))
+	return true
+end
+
+
+--崩溃异常，立即关闭反爬虫系统
+function forceCloseSystem()
+	local cachDict = ngx.shared.cachDict
+	cachDict:set(config.globalStateKey, '0')
+	ngx.log(ngx.ERR, string.format("rebuildCacheDict system got error, force close"))
+end
+
+
+
+
+
+
+
+
+
+
 
 

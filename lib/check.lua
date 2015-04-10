@@ -10,6 +10,17 @@ local tools = require "tools"
 
 function checkState()
 	
+	--重建缓存
+	local result = tools.rebuildCacheDict()
+	if not result then
+		--如果重建缓存出错，直接放过
+		tools.forceCloseSystem()
+		return '0', '', nil, '', true
+	end
+	
+	--缓存字典对象
+	local cachDict = ngx.shared.cachDict
+	
 	local ngxHeader = ngx.req.get_headers() or {}
 	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
 	local remoteAgent = tools.trim(ngxHeader['User-Agent'] or '')
@@ -53,43 +64,12 @@ function checkState()
 		return '0', '', nil, '', true
 	end
 
-	
-	
-	
-	--检查缓存
-	local r, err = conn.conn()
-	--如果连接reids出错
-	if err then
-		ngx.log(ngx.ERR, string.format("checkState redis connect error %s", err))
-		return '0', '', nil
-	end
 
-	--去redis中获取共享字典
-	local gateStateVal, err = r:get(config.globalStateKey) or '0'
-	--如果连接reids出错
-	if err then
-		ngx.log(ngx.ERR, string.format("checkState redis connect gateStateVal error %s", err))
-		return '0', '', nil
-	end	
-	--如果redis没有找到，则关闭,redis返回的nil必须使用ngx.null
-	if gateStateVal == ngx.null or not gateStateVal or gateStateVal == '' then
-		gateStateVal = '0'
-	end
+	--去获取共享字典中的总开关状态
+	local gateStateVal = cachDict:get(config.globalStateKey) or '0'
 
-	
-	local aesKey, err = r:get(config.globalAesKey) or ''
-	--如果连接reids出错
-	if err then
-		ngx.log(ngx.ERR, string.format("checkState redis connect r:get(config.globalAesKey) error %s", err))
-		return '0', '', nil
-	end
-	if aesKey == ngx.null or aesKey == '' then
-		gateStateVal = '0'
-		aesKey = ''
-	end
-
-	--关闭redis链接
-	conn.close(r)
+	--去获取共享字典中的全局key
+	local aesKey = cachDict:get(config.globalAesKey)
 
 	--检查白名单
 	local remoteIp = ngx.var.remote_addr

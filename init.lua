@@ -2,5 +2,14 @@
 	
 require "cjson"	--cjson库
 require "ngx" --ngx库
+local tools = require "tools"
+
+
+
+--初始化重建所有缓存
+--local initResult = tools.rebuildCacheDict()
+--if not initResult then
+--	ngx.log(ngx.ERR, string.format("initLua rebuildCacheDict error"))
+--end
 
 

@@ -8,10 +8,14 @@ local conn = require "redis_conn"
 local checkState = require "check"['checkState']
 
 
-function dealProxyPass(r)
+function dealProxyPass(r, isServerError)
 	if r then
 		--关闭redis链接
 		conn.close(r)
+	end
+	--如果服务器异常了，那就需要关闭state
+	if isServerError then
+		tools.forceCloseSystem()
 	end
 	
 	local args = ngx.req.get_uri_args()
@@ -31,6 +35,7 @@ function erroResponse(r)
 		--关闭redis链接
 		conn.close(r)
 	end
+	
 	local args = ngx.req.get_uri_args()
 	local tdcheck = args['_tdcheck']
 	--如果开启了check
@@ -91,7 +96,7 @@ function doProxy()
 	local isValidCookie, err = tools.verifySessionCookie()
 	--出错直接放过
 	if err then
-		return dealProxyPass()
+		return dealProxyPass(nil, true)
 	end
 	if not isValidCookie then
 		return erroResponse()
@@ -100,44 +105,39 @@ function doProxy()
 	--判断deviceId是否有效
 	local deviceId, err = tools.simpleVerifyDeviceId()
 	if err then
-		return dealProxyPass()
+		return dealProxyPass(nil, true)
 	end			
 	if not deviceId or  deviceId == '' then
 		return erroResponse()
 	end
 	
-		
-	--下面进行redis连接后的检查
-	local r, err = conn.conn()
-	if err then
-		ngx.log(ngx.ERR, string.format("doProxy redis connect r:get(config.globalAesKey) error %s", err))
-		--如果连接reids出错
-		return dealProxyPass()
-	end
 	
-
-	
-	
+	--缓存字典对象
+	local cachDict = ngx.shared.cachDict
 	
 	--检查deviceId的值是否被篡改
 	local ok, err = deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 	--如果deep检查key错误，则要进一步判断是否更改过key
 	if not ok then
-		local lastKey, err = r:get(config.lastGlobalAesKey)
-		if err then
-			ngx.log(ngx.ERR, string.format("doProxy redis connect r:get(config.lastGlobalAesKey) error %s", err))
-			return dealProxyPass(r)
-		end
+		local lastKey = cachDict:get(config.lastGlobalAesKey)
 		--如果没有lastkey
-		if lastKey == ngx.null or not lastKey then
-			return erroResponse(r)
+		if lastKey == ngx.null or not lastKey or lastGlobalAesKey == '' then
+			return erroResponse()
 		else
 			local ok, err = deepCheckDeviceId(deviceId, lastKey, remoteIp, remoteAgent)
 			if not ok then
 				ngx.log(ngx.ERR, string.format("deepCheckDeviceId twice still error, deviceid: %s", deviceId))
-				return erroResponse(r)
+				return erroResponse()
 			end
 		end
+	end
+	
+	--下面进行redis连接后的检查
+	local r, err = conn.conn()
+	if err then
+		ngx.log(ngx.ERR, string.format("doProxy redis connect r:get(config.globalAesKey) error %s", err))
+		--如果连接reids出错
+		return dealProxyPass(nil, true)
 	end
 	
 

@@ -50,6 +50,8 @@ function doJsonp()
 		--cookie设置出错记录错误日志
 		if not ok then
 			ngx.log(ngx.ERR, "cookie:set error :" ..err)
+			--出错强制关闭系统
+			tools.forceCloseSystem()
 			local resStr = tools.jsonp('', '')
 			tools.jsonpSay(resStr)
 			return
