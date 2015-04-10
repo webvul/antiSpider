@@ -61,10 +61,11 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 	
 	
 	local didIpAgent = trueDeviceContent
+	local expectShaStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent)
 	--检查ip地址是否合法
-	if didIpAgent ~= tools.sha256(remoteIp..config.md5Gap..remoteAgent) then
-		--ngx.log(ngx.ERR, string.format("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$__%s,%s",remoteIp,remoteAgent))
-		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid"))
+	if didIpAgent ~= expectShaStr then
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid, remote ip: %s || remote agent: %s", remoteIp,remoteAgent))
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid, client : %s || server : %s", didIpAgent, expectShaStr))
 		return false, nil
 	end
 	
