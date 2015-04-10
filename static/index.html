@@ -25,7 +25,7 @@ $(function(){
 		var key = CryptoJS.MD5(window.tdKey);
 		var iv = CryptoJS.MD5(window.tdIv);
 		var encrypted = CryptoJS.AES.encrypt(encodeStr, key, {iv: iv});
-		alert(encrypted.toString())
+		alert(encodeURIComponent(encrypted.toString()))
 	}
 	
 	var checkState = function(){

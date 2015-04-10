@@ -129,6 +129,11 @@ function verifySessionCookie()
 	--检查sessionCookie是否合法
 	--base64解码
 	sessionVal = ngx.decode_base64(sessionVal)
+	if not sessionVal or sessionVal == '' then
+		ngx.log(ngx.ERR, string.format("verifySessionCookie not valid base64"))
+		return false, nil
+	end
+	
 	local sessionTimestamp = string.sub(sessionVal,1,10)
 	local sessionSign = string.sub(sessionVal,12, -1)
 	local trueSign = sha256(sessionTimestamp..config.md5Gap..config.sessionKey)
