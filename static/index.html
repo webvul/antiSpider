@@ -21,6 +21,12 @@
 
 <script>
 $(function(){
+	window.genTdid = function(encodeStr){
+		var key = CryptoJS.MD5(window.tdKey);
+		var iv = CryptoJS.MD5(window.tdIv);
+		var encrypted = CryptoJS.AES.encrypt(encodeStr, key, {iv: iv});
+		alert(encrypted.toString())
+	}
 	
 	var checkState = function(){
 		$.ajax({
@@ -52,6 +58,9 @@ $(function(){
 					alert('key:'+data[0])
 					alert('iv:'+data[1])
 					alert('str:'+data[2])
+					window.tdKey = data[0]
+					window.tdIv = data[1]
+					
 					alert('success get key and encrypt')
 					var key = data[0],
 						iv = data[1],
