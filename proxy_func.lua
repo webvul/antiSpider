@@ -136,7 +136,7 @@ function doProxy()
 	--下面进行redis连接后的检查
 	local r, err = conn.conn()
 	if err then
-		ngx.log(ngx.ERR, string.format("doProxy redis connect r:get(config.globalAesKey) error %s", err))
+		ngx.log(ngx.ERR, string.format("doProxy redis connect error %s", err))
 		--如果连接reids出错
 		return dealProxyPass(nil, true)
 	end

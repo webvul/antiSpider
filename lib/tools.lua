@@ -187,7 +187,7 @@ function rebuildCacheDict()
 	
 	--配置失效时间小于10分钟,则不去更新更新缓存
 	if nowTs - lastUpdateTs < 60*10 then
-		ngx.log(ngx.INFO, string.format("rebuildCacheDict kiss cache"))
+		ngx.log(ngx.INFO, string.format("rebuildCacheDict kiss cache, globalStateKey %s", cachDict:get(config.globalStateKey)))
 		return true
 	end
 	
@@ -249,7 +249,7 @@ function rebuildCacheDict()
 	--关闭redis链接
 	conn.close(r)
 	
-	ngx.log(ngx.INFO, string.format("rebuildCacheDict rebuild cache success"))
+	ngx.log(ngx.INFO, string.format("rebuildCacheDict rebuild cache success, globalStateKey %s", cachDict:get(config.globalStateKey)))
 	return true
 end
 
