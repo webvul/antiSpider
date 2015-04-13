@@ -197,7 +197,12 @@ function doProxy()
 
 	--进行访问频率判断
 	--获得最新的6片数据
-	didCountList = r:lrange(didKey, 0, config.freqShard)
+	didCountList, err = r:lrange(didKey, 0, config.freqShard)
+	if err then
+		ngx.log(ngx.ERR, string.format("proxy_func r:lrange(didKey, 0, config.freqShard), error: %s", err))
+		return dealProxyPass(nil, true)
+	end
+	
 	tempSum = 0
 	for i = 1, config.freqShard, 1 do
 		--记录每个分片的求和
