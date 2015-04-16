@@ -188,6 +188,8 @@ end
 do
 	local r, err = conn.conn()
 	local cachDict = ngx.shared.cachDict
+	local blackDict = ngx.shared.blackDict
+	blackDict:flush_all() --清楚所有dict里的黑名单
 	
 	--无agent
 	ngx.log(ngx.ERR, string.format("**************************proxy no agent ***********************"))
@@ -474,6 +476,40 @@ do
 	assert(tonumber(lastTs))
 	local countSets = r:scard(string.format(config.dipKey,'127.0.0.1'))
 	assert(tonumber(countSets)==1)
+	
+	
+	ngx.sleep(1)
+	
+
+
+
+	--有td_sid，有td_did，不合法，ip和agent匹配，通过,计数器+1，但是由于频率过高，被挡了400，使用本地的blackDict
+	ngx.log(ngx.ERR, string.format("**************************proxy count too max ***********************"))
+		
+	local httpc = http.new()
+	local res, err = httpc:request_uri(string.format("http://127.0.0.1%s", CHECK_URL_NO_JSONP), {
+        method = "GET",
+        headers = {
+          ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal},
+		  ["referrer"] = 'http://127.0.0.1/',
+        }
+    })
+	
+	local code = res.status
+	local data = trim(res.body)
+	
+	assert(code==ngx.HTTP_BAD_REQUEST)
+	
+	local countSets = r:scard(string.format(config.dipKey,'127.0.0.1'))
+	assert(tonumber(countSets)==1)
+	
+	--ngx.log(ngx.ERR, string.format("@@@@@@@@@@@@@@@@@@@@@@@: %s", didCookie2))
+	assert(blackDict:get(didCookie2)=='1')
+	
+	
+	ngx.sleep(62)
+	assert(not blackDict:get(didCookie2))
 	
 	
 	ngx.say('proxy 方法测试 OK')

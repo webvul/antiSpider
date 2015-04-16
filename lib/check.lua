@@ -8,10 +8,10 @@ local config = require "config"
 local conn = require "redis_conn"
 local tools = require "tools"
 
-function checkState()
+function checkState(isGetKey)
 	
 	--重建缓存
-	local result = tools.rebuildCacheDict()
+	local result = tools.rebuildCacheDict(isGetKey)
 	if not result then
 		--如果重建缓存出错，直接放过
 		tools.forceCloseSystem()
@@ -69,7 +69,7 @@ function checkState()
 	local gateStateVal = cachDict:get(config.globalStateKey) or '0'
 
 	--去获取共享字典中的全局key
-	local aesKey = cachDict:get(config.globalAesKey)
+	local aesKey = cachDict:get(config.globalAesKey) or ''
 
 	--检查白名单
 	local remoteIp = ngx.var.remote_addr
@@ -81,7 +81,7 @@ function checkState()
 		end
 	end
 
-	return gateStateVal, aesKey, aesSecret, remoteAgent
+	return gateStateVal, aesKey, nil, remoteAgent
 
 end
 

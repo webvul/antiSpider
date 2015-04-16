@@ -180,7 +180,7 @@ function jsonpSay(jsStr)
 end
 
 --重建所有缓存
-function rebuildCacheDict()
+function rebuildCacheDict(isGetKey)
 	local cachDict = ngx.shared.cachDict
 	local lastUpdateTs = tonumber(cachDict:get('lastUpdateTs') or 0)
 	local nowTs = getNowTs()
@@ -197,6 +197,10 @@ function rebuildCacheDict()
 	if err then
 		ngx.log(ngx.ERR, string.format("tools rebuildCacheDict redis connect error %s", err))
 		--如果连接reids出错
+		--如果是获取key要求重建缓存，但是又出错的话
+		if isGetKey then
+			return true
+		end
 		return false
 	end
 	
@@ -205,6 +209,10 @@ function rebuildCacheDict()
 	--如果连接reids出错
 	if err then
 		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis connect gateStateVal error %s", err))
+		--如果是获取key要求重建缓存，但是又出错的话
+		if isGetKey then
+			return true
+		end
 		return false
 	end	
 	--如果redis没有找到，则关闭,redis返回的nil必须使用ngx.null
@@ -218,6 +226,10 @@ function rebuildCacheDict()
 	--如果连接reids出错
 	if err then
 		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis connect r:get(config.globalAesKey) error %s", err))
+		--如果是获取key要求重建缓存，但是又出错的话
+		if isGetKey then
+			return true
+		end
 		return false
 	end
 	if aesKey == ngx.null or aesKey == '' then

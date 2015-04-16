@@ -133,6 +133,18 @@ function doProxy()
 		end
 	end
 	
+	
+	--判断此deviceid是否在本地的黑名单中
+	local blackDict = ngx.shared.blackDict 
+	local isBlack = blackDict:get(deviceId) or nil
+	if isBlack then
+		ngx.log(ngx.ERR, string.format("request in local black dict, deviceId %s", deviceId))
+		return erroResponse()
+	end
+	
+	
+	
+	
 	--下面进行redis连接后的检查
 	local r, err = conn.conn()
 	if err then
@@ -211,6 +223,11 @@ function doProxy()
 		--当满足规则时，表示请求过于频繁
 		if config.freqRule[i] ~= -1 and  tempSum >= config.freqRule[i] then
 			ngx.log(ngx.ERR, string.format("request too freqency, deviceId %s, rule: %s", deviceId, i))
+			--访问频繁，本地先做一个黑名单缓存
+			local succ, err = blackDict:set(deviceId, '1', 60)
+			if err then
+				ngx.log(ngx.ERR, string.format("proxy_func blackDict:set, error: %s", err))
+			end
 			return erroResponse(r)
 		end
 	end
