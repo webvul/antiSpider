@@ -146,7 +146,7 @@ function doProxy()
 	
 	
 	--下面进行redis连接后的检查
-	local r, err = conn.conn()
+	local r, err = conn.conn(deviceId)
 	if err then
 		ngx.log(ngx.ERR, string.format("doProxy redis connect error %s", err))
 		--如果连接reids出错
