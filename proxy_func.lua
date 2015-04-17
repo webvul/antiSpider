@@ -76,11 +76,7 @@ end
 
 
 --代理函数
-function doProxy()
-	
-	ngx.log(ngx.ERR, string.format("remote ip %s ",tools.getRealIp()))
-	
-	 
+function doProxy()	 
 	
 	--检查状态
 	local gateStateVal, aesKey, aesSecret, remoteAgent, noAgent = checkState()
