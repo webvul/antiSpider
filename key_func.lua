@@ -12,6 +12,8 @@ function doJsonp()
 		--检查状态
 		local gateStateVal, aesKey, aesSecret, remoteAgent, noAgent = checkState(true)
 		
+		
+		
 		if noAgent then
 			ngx.exit(400)
 			return

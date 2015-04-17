@@ -128,7 +128,7 @@ function jsonp(aesKey, encryptStr, cbName)
 	local globalAesIv = config.globalAesIv
 	local callbackName
 	--如果aeskey是空，则都返回空或者'0'
-	if aesKey == '' or aesKey == '0' or aesKey == '1' then
+	if aesKey == '' or encryptStr == '0' or aesKey == '1' then
 		globalAesIv = ''
 		encryptStr = ''
 	end
