@@ -29,8 +29,8 @@ function loghtml(txt){
 }
 fish.ready(function(){
     var getKeyTime = new Date().getTime(),
-        checkUrl = 'http://irondome.ly.com/?_tdcheck=1',
-        tdUrl = 'http://irondome.ly.com/AntiStatus.ashx';
+        checkUrl = 'http://irondome.ly.com/td/check?_tdcheck=1',
+        tdUrl = 'http://irondome.ly.com/anitservice/AntiStatus.ashx';
     fish.td(function(){
         fish.ajax({
             url: checkUrl,
