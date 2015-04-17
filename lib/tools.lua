@@ -9,23 +9,45 @@ local aes = require "resty.aes"
 local str = require "resty.string"
 local config = require "config"
 local conn = require "redis_conn"
-local split = require "split"
 require "cjson"	--cjson库
+
+
+
+
+-- Compatibility: Lua-5.1
+function split(str, pat)
+   local t = {}  -- NOTE: use {n = 0} in Lua-5.0
+   local fpat = "(.-)" .. pat
+   local last_end = 1
+   local s, e, cap = str:find(fpat, 1)
+   while s do
+      if s ~= 1 or cap ~= "" then
+	 table.insert(t,cap)
+      end
+      last_end = e+1
+      s, e, cap = str:find(fpat, last_end)
+   end
+   if last_end <= #str then
+      cap = str:sub(last_end)
+      table.insert(t, cap)
+   end
+   return t
+end
+
 
 
 --获取真实ip
 function getRealIp()
 	
 	local header = ngx.req.get_headers()
-	local xPowderFor = header['x-forwarded-for']
-	
+
 	--如果没有 x-forwarded-for 头
-	if not xPowderFor then
+	if not header['x-forwarded-for'] then
 		local realIp = ngx.var.remote_addr or '127.0.0.1'
 		return realIp
 	end
 	--截取真实ip
-	local realIp = split(xPowderFor, ',')[1] or '127.0.0.1'
+	local realIp = split(header['x-forwarded-for'], ',')[1]
 	return realIp
 
 end
