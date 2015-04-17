@@ -74,7 +74,6 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 
 end
 
-
 --代理函数
 function doProxy()	 
 	
