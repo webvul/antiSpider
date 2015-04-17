@@ -9,7 +9,7 @@ local result = false
 for i,v in ipairs(config.internalList) do
 		--如果在白名单中，则把开关关闭
 		if v == remoteIp then
-			result = tools.rebuildCacheDict()
+			result = tools.rebuildCacheDict(nil, true)
 			break
 		end
 end

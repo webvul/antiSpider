@@ -180,21 +180,38 @@ function jsonpSay(jsStr)
 end
 
 --重建所有缓存
-function rebuildCacheDict(isGetKey)
+function rebuildCacheDict(isGetKey, isForceRebuild)
 	local cachDict = ngx.shared.cachDict
 	local lastUpdateTs = tonumber(cachDict:get('lastUpdateTs') or 0)
 	local nowTs = getNowTs()
 	
-	--配置失效时间小于10分钟,则不去更新更新缓存
-	if nowTs - lastUpdateTs < 60*10 then
-		ngx.log(ngx.INFO, string.format("rebuildCacheDict kiss cache, globalStateKey %s", cachDict:get(config.globalStateKey)))
-		return true
+	
+	if not isForceRebuild then --只有在不强制重建缓存才会去判断
+	
+		--配置失效时间小于10分钟,则不去更新更新缓存
+		if nowTs - lastUpdateTs < 60*10 then
+			ngx.log(ngx.INFO, string.format("rebuildCacheDict kiss cache, globalStateKey %s", cachDict:get(config.globalStateKey)))
+			return true
+		end
+		
+		
+		--缓存失效，先去看看有没有线程去获取缓存了，获取缓存的key还在不在
+		local getCacheKey = cachDict:get('getCacheKey') or '0'
+		if getCacheKey == '1' then --表示已经有线程去获取缓存了
+			ngx.log(ngx.INFO, string.format("rebuildCacheDict other thread get cache, getCacheKey 0"))
+			return true
+		end
+	
 	end
+	
+	--拿走'getCacheKey'
+	cachDict:set('getCacheKey', '1', 120)
 	
 	--大于10分钟后，就开始重建缓存了
 	--打开redis连接
 	local r, err = conn.conn()
 	if err then
+		cachDict:set('getCacheKey', '0') --出错放回getCacheKey
 		ngx.log(ngx.ERR, string.format("tools rebuildCacheDict redis connect error %s", err))
 		--如果连接reids出错
 		--如果是获取key要求重建缓存，但是又出错的话
@@ -208,6 +225,7 @@ function rebuildCacheDict(isGetKey)
 	local gateStateVal, err = r:get(config.globalStateKey) or '0'
 	--如果连接reids出错
 	if err then
+		cachDict:set('getCacheKey', '0') --出错放回getCacheKey
 		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis connect gateStateVal error %s", err))
 		--如果是获取key要求重建缓存，但是又出错的话
 		if isGetKey then
@@ -225,6 +243,8 @@ function rebuildCacheDict(isGetKey)
 	local aesKey, err = r:get(config.globalAesKey) or ''
 	--如果连接reids出错
 	if err then
+	
+		cachDict:set('getCacheKey', '0') --出错放回getCacheKey
 		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis connect r:get(config.globalAesKey) error %s", err))
 		--如果是获取key要求重建缓存，但是又出错的话
 		if isGetKey then
@@ -242,6 +262,7 @@ function rebuildCacheDict(isGetKey)
 	local lastAesKey, err = r:get(config.lastGlobalAesKey) or ''
 	--如果连接reids出错
 	if err then
+		cachDict:set('getCacheKey', '0') --出错放回getCacheKey
 		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis connect r:get(config.lastGlobalAesKey) error %s", err))
 		return false
 	end
@@ -257,7 +278,8 @@ function rebuildCacheDict(isGetKey)
 	cachDict:set(config.lastGlobalAesKey, lastAesKey)
 	cachDict:set('lastUpdateTs', tostring(nowTs))
 	
-	
+	--缓存生成成功，放回'getCacheKey'
+	cachDict:set('getCacheKey', '0')
 	--关闭redis链接
 	conn.close(r)
 	
