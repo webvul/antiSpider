@@ -5,6 +5,7 @@ local config = require "config"
 local tools = require "tools"
 local ck = require "resty.cookie"
 local conn = require "redis_conn"
+local cjson = require "cjson"
 local checkState = require "check"['checkState']
 
 
@@ -76,7 +77,11 @@ end
 
 --代理函数
 function doProxy()
-		
+	
+	ngx.log(ngx.ERR, string.format("remote ip %s ",tools.getRealIp()))
+	
+	 
+	
 	--检查状态
 	local gateStateVal, aesKey, aesSecret, remoteAgent, noAgent = checkState()
 	--如果没有Agent，报错
@@ -87,10 +92,10 @@ function doProxy()
 	if gateStateVal == '0' then
 		return dealProxyPass()
 	end
-
+	
 	--定义变量
 	local enterTime = tools.getNowTs()
-	local remoteIp = ngx.var.remote_addr or '127.0.0.1'
+	local remoteIp = tools.getRealIp()
 	local remoteAgent = remoteAgent
 
 	--判断sessioncookie是否有效

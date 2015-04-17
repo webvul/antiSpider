@@ -9,9 +9,26 @@ local aes = require "resty.aes"
 local str = require "resty.string"
 local config = require "config"
 local conn = require "redis_conn"
+local split = require "split"
 require "cjson"	--cjson库
 
 
+--获取真实ip
+function getRealIp()
+	
+	local header = ngx.req.get_headers()
+	local xPowderFor = header['x-forwarded-for']
+	
+	--如果没有 x-forwarded-for 头
+	if not xPowderFor then
+		local realIp = ngx.var.remote_addr or '127.0.0.1'
+		return realIp
+	end
+	--截取真实ip
+	local realIp = split(xPowderFor, ',')[1] or '127.0.0.1'
+	return realIp
+
+end
 
 function trim(s)
     return s:gsub("^%s*(.-)%s*$", "%1")

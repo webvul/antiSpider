@@ -28,7 +28,7 @@ function doJsonp()
 		--end
 
 		local enterTime = tools.getNowTs()
-		local remoteIp = ngx.var.remote_addr
+		local remoteIp = tools.getRealIp()
 		local remoteAgent = remoteAgent
 
 		--将ip,agent和时间戳加密成待加密字符串,用内部aes加密key来进行加密

@@ -72,7 +72,7 @@ function checkState(isGetKey)
 	local aesKey = cachDict:get(config.globalAesKey) or ''
 
 	--检查白名单
-	local remoteIp = ngx.var.remote_addr
+	local remoteIp = tools.getRealIp()
 	for i,v in ipairs(ipWhiteList) do
 		--如果在白名单中，则把开关关闭
 		if v == remoteIp then
