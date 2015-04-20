@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>反爬虫jssdk测试</title>
+<meta name="keywords" content="Base64编码,Base64解码" />
+
+<script src="http://piccvote.qiniudn.com/dist/js/vendor/jquery.min.js" type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/jquery.cookie.js"  type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/aes.all.js"  type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/md5.all.js" type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/moment.js" type="text/javascript"></script>
+<script src="http://wzhfile.qiniudn.com/base64.min.js" type="text/javascript"></script>
+
+
+</head>
+<body>
+<h1>反爬虫jssdk测试页面</h1>
+
+<div id="info"></div>
+
+<script>
+$(function(){
+	window.genTdid = function(encodeStr){
+		var key = CryptoJS.MD5(window.tdKey);
+		var iv = CryptoJS.MD5(window.tdIv);
+		var encrypted = CryptoJS.AES.encrypt(encodeStr, key, {iv: iv});
+		alert(encodeURIComponent(encrypted.toString()))
+	}
+	
+	var host = 'http://irondome.ly.com'
+	
+	var checkState = function(){
+		$.ajax({
+			'url':host+'/check',
+			'data':{'_tdcheck':1},
+			'dataType':'jsonp',
+			'jsonp':'callback',
+			'success':function(data){
+					alert('result:'+data[0])
+					if(data[0] == '1'){
+						alert('检查成功')
+					}
+					else{
+						alert('检查失败')
+					}
+					
+				}
+			})
+	
+	}
+	
+	var getKey = function(){
+		$.ajax({
+			'url':host+'/td/key',
+			'data':{'r':Math.random()},
+			'dataType':'jsonp',
+			'jsonp':'callback',
+			'success':function(data){
+					alert('key:'+data[0])
+					alert('iv:'+data[1])
+					alert('str:'+data[2])
+					window.tdKey = data[0]
+					window.tdIv = data[1]
+					
+					alert('success get key and encrypt')
+					var key = data[0],
+						iv = data[1],
+						aesStr = data[2]
+
+
+					var key = CryptoJS.MD5(key);
+					var iv = CryptoJS.MD5(iv);
+					var encrypted = CryptoJS.AES.encrypt(aesStr, key, {iv: iv});
+					var aesStr = encrypted.toString()
+					
+					$.ajax({
+						'url':host+'/td/cookie',
+						'data':{did:aesStr},
+						'dataType':'jsonp',
+						'jsonp':'callback',
+						'success':function(data){
+							if(data[0]==1){
+								alert('/td/cookie 成功')
+								$('#info').append(aesStr)
+								$('#info').append('<br/><br/>')
+								$('#info').append(encrypted.toString())
+								
+								alert('set cookie success')
+								$.cookie('t_q', 1, {path: '/' })
+								checkState()
+							}
+							else{
+								return alert('/td/cookie 失败')
+							}
+						
+						
+							
+						}
+					})
+								
+				}
+				
+			})
+			
+	}
+	
+	var t_q = $.cookie('t_q')
+	if(!t_q){
+		alert('not found t_q')
+		getKey()
+	}
+	else{
+		$('#info').append(t_q)
+		checkState()
+	}
+	
+
+})
+/*
+
+
+在getkey之前，需要先检查如下项目，判断用户是否是真实用户，并发送错误异常： 
+a\cookie是否开启（不开启不执行ready）
+b\屏幕分辨率是否正常
+c\滚动条高度是否正常
+d\放入一个隐藏的div，设置css是否正常
+e\如果是IE，检查activex插件是否可以实例化
+f\如果是chrome或者ff，检查html5特性，localstorage等
+
+a不开启不执行ready和getkey
+b-f有3项不合法，不执行getkey
+
+
+1、当getkey一切正常就执行ready的回调函数
+2、当发现cookie中有'td_did'，就直接执行ready函数
+3、当getkey函数获取的到的 data[0]==''||data[1]==''||data[2]=='' 任意一个为空时，说明服务器出错了，需要打日志，然后直接执行ready
+4、捕获一些错误异常，并且这些错误要打点到服务器：getkey的出现网络错误、getkey请求超时，MD5和AES加密错误
+5、在测试期间，需要另外写一个js，用来接入我们的tdsdk，需要请求我们的check地址，这个地址是jsonp接口，
+如果成功返回：callback(['1','',''])如果失败返回callback(['0','',''])
+在测试期间，无论返回成功还是失败，都需要向日志服务器记录
+测试期间，还需要记录getkey和check请求的响应时间
+
+最后日志记录参数如下，打点利用向dom流中插入img标签方式
+Xxxxx/status?typ=[errortype]&typ2=[errortype2]&rdyt=13333333&chkt=1333333&did=[deviceid]&chkr=[checkResult]
+
+相关参数说明如下：
+Errortype=0 (正常情况)
+Errortype=1 (getkey网络错误)
+Errortype=2 (getkey网络超时)
+Errortype=3 (getkey接口返回key为空等，服务器出错)
+Errortype=4 (执行js检测出错误)
+Errortype=5 (MD5和AES加密错误)
+Errortype=6 (check接口网络错误包括超时)
+Errortype=7 (check接口返回错误)
+
+Errortype=2时，会传入typ2参数，多个以逗号分隔，没有不记录传入0
+errortype2=1 cookie未开启
+errortype2=2 屏幕分辨率不正常
+errortype2=3 滚动条高度不正常
+errortype2=4 css不正常
+errortype2=4 IE中activex插件无法正常工作
+errortype2=6 移动端或者html浏览器，无法运行html5特性
+
+rdyt表示，getkey整个流程耗时时间，单位毫秒，没有不记录则为0
+did表示此次deviceid的值，没有不记录则为0
+chkt表示测试期间，测试接口响应时间，单位毫秒，没有不记录则为0
+chkr表示测试期间，检查接口响应的结果，1表示成功，2表示失败，没有不记录传入0
+
+
+
+*/
+</script>
+</body>
+</html>

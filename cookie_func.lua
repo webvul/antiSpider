@@ -15,6 +15,8 @@ function doSetCookie()
 			return
 		end
 		
+		local did = ngx.escape_uri(did)
+		
 		--设置加密cookie
 		local cookie, err = ck:new()
 		local ok, err = cookie:set({
