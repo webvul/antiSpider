@@ -148,6 +148,8 @@ end
 
 --验证加密cookie是否合法
 function verifySessionCookie()
+	
+	local remoteIp = getRealIp()
 	local cookie, err = ck:new()
 	--出错了
 	if not cookie then
@@ -161,7 +163,7 @@ function verifySessionCookie()
 		return false, nil
 	end
 	if sessionVal == ngx.null or  not sessionVal or sessionVal == '' then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie not have sessionVal"))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie not have sessionVal, remoteip: %s", remoteIp))
 		return false, nil
 	end
 
@@ -169,7 +171,7 @@ function verifySessionCookie()
 	--base64解码
 	sessionVal = ngx.decode_base64(sessionVal)
 	if not sessionVal or sessionVal == '' then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie not valid base64"))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie not valid base64, remoteip: %s", remoteIp))
 		return false, nil
 	end
 	
@@ -177,10 +179,10 @@ function verifySessionCookie()
 	local sessionSign = string.sub(sessionVal,12, -1)
 	local trueSign = sha256(sessionTimestamp..config.md5Gap..config.sessionKey)
 	if trueSign ~= sessionSign then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie sign not valid, sessionval : %s", sessionVal))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie sign not valid, sessionval : %s, remoteip: %s", sessionVal, remoteIp))
 		return false, nil
 	elseif getNowTs() - tonumber(sessionTimestamp) > 3600*48 then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie timestamp expire sessionval : %s", sessionVal))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie timestamp expire sessionval : %s, remoteip: %s", sessionVal, remoteIp))
 		return false, nil
 	else
 		return true, nil
@@ -190,6 +192,7 @@ end
 --验证deviceid是否合法
 function simpleVerifyDeviceId()
 	local cookie, err = ck:new()
+	local remoteIp = getRealIp()
 	if not cookie then
 		return nil, err
 	end
@@ -201,7 +204,7 @@ function simpleVerifyDeviceId()
 	end
 	--判断deviceid是否存在
 	if not deviceId or deviceId == '' then
-		ngx.log(ngx.ERR, string.format("verifyDeviceId not have deviceId"))
+		ngx.log(ngx.ERR, string.format("verifyDeviceId not have deviceId, remoteip: %s", remoteIp))
 		return false, nil
 	else
 		deviceId = ngx.unescape_uri(deviceId)

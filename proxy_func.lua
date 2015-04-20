@@ -55,7 +55,7 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 	local trueDeviceContent = tools.aes128Decrypt(deviceId, aesKey)
 	
 	if not trueDeviceContent then
-		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt error, deviceId is %s",deviceId))
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt error, deviceId is %s, remoteIp %s",deviceId, remoteIp))
 		return false, nil
 	end
 	
@@ -127,7 +127,7 @@ function doProxy()
 		else
 			local ok, err = deepCheckDeviceId(deviceId, lastKey, remoteIp, remoteAgent)
 			if not ok then
-				ngx.log(ngx.ERR, string.format("deepCheckDeviceId twice still error, deviceid: %s", deviceId))
+				ngx.log(ngx.ERR, string.format("deepCheckDeviceId twice still error, deviceid: %s, remoteIp:%s", deviceId, remoteIp))
 				return erroResponse()
 			end
 		end
@@ -138,7 +138,7 @@ function doProxy()
 	local blackDict = ngx.shared.blackDict 
 	local isBlack = blackDict:get(deviceId) or nil
 	if isBlack then
-		ngx.log(ngx.ERR, string.format("request in local black dict, deviceId %s", deviceId))
+		ngx.log(ngx.ERR, string.format("request in local black dict, deviceId %s, remoteIp:%s", deviceId, remoteIp))
 		return erroResponse()
 	end
 	
@@ -159,7 +159,7 @@ function doProxy()
 	local isBlack = r:get(blackKey)
 	--如果在黑名单中
 	if isBlack ~= ngx.null and isBlack then
-		ngx.log(ngx.ERR, string.format("request in blackList, deviceId %s", deviceId))
+		ngx.log(ngx.ERR, string.format("request in blackList, deviceId %s, remoteIp:%s", deviceId, remoteIp))
 		return erroResponse(r)
 	end
 
@@ -222,7 +222,7 @@ function doProxy()
 				
 		--当满足规则时，表示请求过于频繁
 		if config.freqRule[i] ~= -1 and  tempSum >= config.freqRule[i] then
-			ngx.log(ngx.ERR, string.format("request too freqency, deviceId %s, rule: %s", deviceId, i))
+			ngx.log(ngx.ERR, string.format("request too freqency, deviceId %s, rule: %s, remoteIp: %s", deviceId, i, remoteIp))
 			--访问频繁，本地先做一个黑名单缓存
 			local succ, err = blackDict:set(deviceId, '1', 60)
 			if err then
