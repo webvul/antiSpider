@@ -5,6 +5,8 @@ local tools = require "tools"
 local ck = require "resty.cookie"
 
 
+ngx.header["P3P"] = 'CP="CURa ADMa DEVa PSAo PSDo OUR BUS UNI PUR INT DEM STA PRE COM NAV OTC NOI DSP COR"'
+
 function doSetCookie()
 		--参数
 		local args = ngx.req.get_uri_args()

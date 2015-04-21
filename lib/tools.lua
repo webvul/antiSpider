@@ -35,6 +35,20 @@ function split(str, pat)
 end
 
 
+function isdigit(str)
+	if str == nil then
+		return nil, "the string parameter is nil"
+	end
+	local len = string.len(str)
+	for i = 1, len do
+		local ch = string.sub(str, i, i)
+		if ch < '0' or ch > '9' then
+			return false
+		end
+	end
+	return true
+end
+
 
 --获取真实ip
 function getRealIp()

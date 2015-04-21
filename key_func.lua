@@ -6,7 +6,7 @@ local ck = require "resty.cookie"
 local checkState = require "check"['checkState']
 
 
-
+ngx.header["P3P"] = 'CP="CURa ADMa DEVa PSAo PSDo OUR BUS UNI PUR INT DEM STA PRE COM NAV OTC NOI DSP COR"'
 
 function doJsonp()
 		--检查状态
