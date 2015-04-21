@@ -25,8 +25,7 @@ function doSetCookie()
 			key = config.deviceIdCookieName,
 			value = did,
 			path = "/",
-			httponly = true,
-			max_age = config.sessionMaxAge
+			httponly = true
 		})
 		local resStr = tools.jsonp('1')
 		tools.jsonpSay(resStr)

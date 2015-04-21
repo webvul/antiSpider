@@ -45,8 +45,7 @@ function doJsonp()
 			key = config.sessionName,
 			value = sessionVal,
 			path = "/",
-			httponly = true,
-			max_age = config.sessionMaxAge
+			httponly = true
 		})
 
 		--cookie设置出错记录错误日志
