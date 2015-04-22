@@ -51,8 +51,10 @@ end
 
 
 function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
-		
+	
+	
 	local trueDeviceContent = tools.aes128Decrypt(deviceId, aesKey)
+	
 	
 	if not trueDeviceContent then
 		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt error, deviceId is %s, remoteIp %s",deviceId, remoteIp))

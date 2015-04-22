@@ -165,6 +165,8 @@ function verifySessionCookie()
 	
 	local remoteIp = getRealIp()
 	local cookie, err = ck:new()
+	local header = ngx.req.get_headers()
+	local agent = header['User-Agent'] or ''
 	--出错了
 	if not cookie then
 		return nil, err
@@ -177,7 +179,7 @@ function verifySessionCookie()
 		return false, nil
 	end
 	if sessionVal == ngx.null or  not sessionVal or sessionVal == '' then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie not have sessionVal, remoteip: %s", remoteIp))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie not have sessionVal, remoteip: %s, agent: %s", remoteIp, agent))
 		return false, nil
 	end
 
@@ -185,7 +187,7 @@ function verifySessionCookie()
 	--base64解码
 	sessionVal = ngx.decode_base64(sessionVal)
 	if not sessionVal or sessionVal == '' then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie not valid base64, remoteip: %s", remoteIp))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie not valid base64, remoteip: %s, agent: %s", remoteIp, agent))
 		return false, nil
 	end
 	
@@ -193,10 +195,10 @@ function verifySessionCookie()
 	local sessionSign = string.sub(sessionVal,12, -1)
 	local trueSign = sha256(sessionTimestamp..config.md5Gap..config.sessionKey)
 	if trueSign ~= sessionSign then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie sign not valid, sessionval : %s, remoteip: %s", sessionVal, remoteIp))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie sign not valid, sessionval : %s, remoteip: %s, agent: %s", sessionVal, remoteIp, agent))
 		return false, nil
 	elseif getNowTs() - tonumber(sessionTimestamp) > 3600*48 then
-		ngx.log(ngx.ERR, string.format("verifySessionCookie timestamp expire sessionval : %s, remoteip: %s", sessionVal, remoteIp))
+		ngx.log(ngx.ERR, string.format("verifySessionCookie timestamp expire sessionval : %s, remoteip: %s, agent: %s", sessionVal, remoteIp, agent))
 		return false, nil
 	else
 		return true, nil
@@ -207,6 +209,9 @@ end
 function simpleVerifyDeviceId()
 	local cookie, err = ck:new()
 	local remoteIp = getRealIp()
+	local header = ngx.req.get_headers()
+	local agent = header['User-Agent'] or ''
+	
 	if not cookie then
 		return nil, err
 	end
@@ -218,7 +223,7 @@ function simpleVerifyDeviceId()
 	end
 	--判断deviceid是否存在
 	if not deviceId or deviceId == '' then
-		ngx.log(ngx.ERR, string.format("verifyDeviceId not have deviceId, remoteip: %s", remoteIp))
+		ngx.log(ngx.ERR, string.format("verifyDeviceId not have deviceId, remoteip: %s, agent: %s", remoteIp, agent))
 		return false, nil
 	else
 		deviceId = ngx.unescape_uri(deviceId)
