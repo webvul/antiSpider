@@ -12,6 +12,8 @@ function checkState(isGetKey)
 	
 	--重建缓存
 	local result = tools.rebuildCacheDict(isGetKey)
+	local remoteIp = tools.getRealIp()
+	
 	if not result then
 		--如果重建缓存出错，直接放过
 		tools.forceCloseSystem()
@@ -29,7 +31,7 @@ function checkState(isGetKey)
 	--检查agent
 	if not remoteAgent or remoteAgent == '' then
 	--如果没有agent,多返回一个参数noAgent为true，出错并记录
-		ngx.log(ngx.ERR, string.format("checkState not have  User-Agent"))
+		ngx.log(ngx.ERR, string.format("checkState not have  User-Agent, remoteIp:%s", remoteIp))
 		return '0', '', nil, '', true
 	end
 	
@@ -38,7 +40,7 @@ function checkState(isGetKey)
 		local res, _ = string.find(remoteAgent, blackAgent[i])
 		--表示有敏感的agent,出错并记录
 		if res ~= nil then
-			ngx.log(ngx.ERR, string.format("checkState User-Agent have :%s, User-Agent: %s", blackAgent[i], remoteAgent))
+			ngx.log(ngx.ERR, string.format("checkState User-Agent have :%s, User-Agent: %s, remoteIp: %s", blackAgent[i], remoteAgent, remoteIp))
 			return '0', '', nil, '', true
 		end
 	end 
@@ -46,7 +48,7 @@ function checkState(isGetKey)
 	--检查referrer
 	if not referer or referer == '' then
 		--如果没有referer,出错记录
-		ngx.log(ngx.ERR, string.format("checkState not have referer or referrer"))
+		ngx.log(ngx.ERR, string.format("checkState not have referer or referrer, remoteIp: %s", remoteIp))
 		return '0', '', nil, '', true
 	end
 	
@@ -60,7 +62,7 @@ function checkState(isGetKey)
 		end
 	end
 	if refererFound == 0 then
-		ngx.log(ngx.ERR, string.format("checkState referer not in white list"))
+		ngx.log(ngx.ERR, string.format("checkState referer not in white list, remoteIp: %s", remoteIp))
 		return '0', '', nil, '', true
 	end
 
@@ -72,7 +74,7 @@ function checkState(isGetKey)
 	local aesKey = cachDict:get(config.globalAesKey) or ''
 
 	--检查白名单
-	local remoteIp = tools.getRealIp()
+	
 	for i,v in ipairs(ipWhiteList) do
 		--如果在白名单中，则把开关关闭
 		if v == remoteIp then
