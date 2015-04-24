@@ -250,7 +250,7 @@ function rebuildCacheDict(isGetKey, isForceRebuild)
 	if not isForceRebuild then --只有在不强制重建缓存才会去判断
 	
 		--配置失效时间小于10分钟,则不去更新更新缓存
-		if nowTs - lastUpdateTs < 60*10 then
+		if nowTs - lastUpdateTs < 60*60 then
 			ngx.log(ngx.INFO, string.format("rebuildCacheDict kiss cache, globalStateKey %s", cachDict:get(config.globalStateKey)))
 			return true
 		end

@@ -31,7 +31,7 @@ ngx.log(ngx.INFO, string.format("TEST DID toEncryptStr: %s", toEncryptStr))
 --Ω‚√‹¥Æ
 local decodeDid
 if did and did ~= '' then
-	decodeDid = tools.aes128Decrypt(aesStr, key)
+	decodeDid = tools.aes128Decrypt(did, key)
 	ngx.log(ngx.INFO, string.format("TEST DID decodeDid: %s", decodeDid))
 else
 	decodeDid = ''
@@ -42,9 +42,9 @@ local tmpTable = {
 	agent=agent,
 	key=key,
 	iv=iv,
-	toEncryptStr=toEncryptStr,
-	aesStr=aesStr,
-	decodeDid=decodeDid,
+	nginx_toEncryptStr=toEncryptStr,
+	nginx_aesStr=aesStr,
+	client_decodeDid=decodeDid,
 }
 
 ngx.header["Content-Type"] = 'text/plain'
