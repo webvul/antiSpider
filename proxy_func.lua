@@ -68,7 +68,7 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 	--检查ip地址是否合法
 	if didIpAgent ~= expectShaStr then
 		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid, remote ip: %s || remote agent: %s", remoteIp,remoteAgent))
-		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid, client : %s || server : %s", didIpAgent, expectShaStr))
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid, client : %s || server : %s || aesClient: %s", didIpAgent, expectShaStr, deviceId))
 		return false, nil
 	end
 	
