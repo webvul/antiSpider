@@ -61,21 +61,40 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 		return false, nil
 	end
 	
+
 	--对加密的deviceid进行解密
 	local didList = tools.split(trueDeviceContent, ',')
-	local didIpAgent = didList[1]
-	local aesEncryptIp = didList[2]
+	local didIpAgent = didList[1] or ''
+	local aesEncryptIp = didList[2] or ''
+	local aesEncryptRandom = didList[3] or ''
 	
-	ngx.log(ngx.INFO, string.format("deepCheckDeviceId aes128Decrypt, didIpAgent:%s | aesEncryptIp: %s ", didIpAgent, aesEncryptIp))
+	ngx.log(ngx.INFO, string.format("deepCheckDeviceId aes128Decrypt, trueDeviceContent：%s | didIpAgent:%s | aesEncryptIp: %s | aesEncryptRandom: %s", trueDeviceContent, didIpAgent, aesEncryptIp, aesEncryptRandom))
 	
 	--拿到用户加密时用的ip地址
 	local trueRemoteLastIp = tools.aes128Decrypt(aesEncryptIp, config.globalIpAesKey)
-	
 	--如果ip解密失败
 	if not trueRemoteLastIp or trueRemoteLastIp == '' then
 		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt trueRemoteLastIp error, trueDeviceContent: %s ", trueDeviceContent))
 		return false, nil
 	end
+	
+
+	--拿到用户加密时用的随机数
+	local trueRandom = tools.aes128Decrypt(aesEncryptRandom, config.globalIpAesKey)
+	--如果随机数解密失败
+	if not trueRandom or trueRandom == '' then
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt trueRandom error, trueDeviceContent: %s ", trueDeviceContent))
+		return false, nil
+	end
+	--将随机数转为整数
+	local trueRandomNum = tonumber(trueRandom)
+	--如果这个整数不在100万和1000万之间，则报错
+	if not trueRandomNum or trueRandomNum < 1000000 or trueRandomNum > 10000000 then
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt trueRandom invalid, trueRandom: %s ", trueRandom))
+		return false, nil
+	end
+	
+	
 	
 	local expectShaStr = tools.sha256(trueRemoteLastIp..config.md5Gap..remoteAgent)
 	--检查ip地址是否合法

@@ -36,8 +36,14 @@ function doJsonp()
 		--将ip,agent和时间戳加密成待加密字符串,用内部aes加密key来进行加密
 		local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent)
 		local aesIpStr = tools.aes128Encrypt(remoteIp, config.globalIpAesKey)
-		--生成 xxxxx.yyyy 这种形式的did,前面是ip和agent的sha1，后面是ip的加密串
-		toEncryptStr = toEncryptStr .. ',' .. aesIpStr
+		
+		--生成随机数，100万-1000万之间用来散列deviceid
+		math.randomseed(tostring(os.time()):reverse():sub(1, 6))
+		local randNum = math.random(1000000, 10000000)
+		local aesRandomStr = tools.aes128Encrypt(tostring(randNum), config.globalIpAesKey)
+		
+		--生成 xxxxx.yyyy,zzz 这种形式的did,前面是ip和agent的sha1，后面是ip的加密串, 最后是随机数的加密串
+		toEncryptStr = toEncryptStr .. ',' .. aesIpStr .. ',' .. aesRandomStr
 		
 		--生成加密session的字符串
 		local sessionSha256 = tools.sha256(enterTime..config.md5Gap..config.sessionKey)

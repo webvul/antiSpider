@@ -344,7 +344,8 @@ do
 	local remoteIp = '127.0.0.1'
 	local remoteAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36"
 	local aesIpStr = tools.aes128Encrypt(remoteIp, config.globalIpAesKey)
-	local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent) .. ',' .. aesIpStr
+	local aesRandomStr = tools.aes128Encrypt( '2000000', config.globalIpAesKey)
+	local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent) .. ',' .. aesIpStr .. ',' .. aesRandomStr
 	local aesKey = globalAesKey
 	local aesStr = toEncryptStr
 	local didCookie = tools.aes128Encrypt(aesStr, aesKey)
