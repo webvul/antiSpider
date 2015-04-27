@@ -67,8 +67,11 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 	local expectShaStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent)
 	--检查ip地址是否合法
 	if didIpAgent ~= expectShaStr then
+		--记录错误
+		local lastKeyState = tools.getLastKeyCookie() or 'not found k_st cookie'
 		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid, remote ip: %s || remote agent: %s", remoteIp,remoteAgent))
 		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid, client : %s || server : %s || aesClient: %s", didIpAgent, expectShaStr, deviceId))
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId verifyDeviceId IP and agent not valid, last get key ip and timestamp: %s", lastKeyState))
 		return false, nil
 	end
 	

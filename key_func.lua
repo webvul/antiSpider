@@ -47,6 +47,15 @@ function doJsonp()
 			path = "/",
 			httponly = true
 		})
+		
+		--测试用,放入用户上一次调用key方法的ip和时间戳
+		local ok2, err = cookie:set({
+			key = 'k_st',
+			value = remoteIp..'|'..enterTime,
+			path = "/",
+			httponly = true
+		})
+		
 
 		--cookie设置出错记录错误日志
 		if not ok then

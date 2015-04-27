@@ -356,8 +356,17 @@ function forceCloseSystem()
 	ngx.log(ngx.ERR, string.format("rebuildCacheDict system got error, force close"))
 end
 
+--获取用户上次请求key的ip地址和时间戳
+function getLastKeyCookie()
+	
+	local cookie, err = ck:new()
+	local keyState, err = cookie:get('k_st')
+	if not keyState or keyState == ngx.null or err then
+		return nil
+	end
+	return keyState
 
-
+end
 
 
 
