@@ -4,6 +4,7 @@ local config = require "config"
 local tools = require "tools"
 local conn = require "redis_conn"
 local http = require "resty.http"
+local cjson = require "cjson"
 
 
 KEY_URL = "/td/key?callback=callback"
@@ -169,13 +170,24 @@ do
 	local data = trim(res.body)
 	assert(code==200)
 	assert('body', ';callback(["12345678901234567890123456789012","'..config.globalAesIv..'","'..ipAndAgent..'"]);')
+	
 	local cookieVal = res.header['Set-Cookie']
 	--下面测试用
-
-	local p = string.find(cookieVal, config.sessionName)
-	assert(p)
-	local p = string.find(cookieVal, 'HttpOnly')
-	assert(p)
+	ngx.log(ngx.ERR, string.format("@@@@@@@@@@@@@@@@@ cookieVal %s",cjson.encode(cookieVal)))
+	
+	local p1 = 0
+	local p2 = 0
+	for i = 1, #cookieVal do
+		if string.find(cookieVal[i], config.sessionName) then
+			p1 = p1 + 1
+		end
+		if string.find(cookieVal[i], 'HttpOnly') then
+			p2 = p2 + 2
+		end
+	end
+	
+	assert(p1>0)
+	assert(p2>0)
 	
 	ngx.say('key 生成方法测试 OK')
 	conn.close(r)
@@ -331,7 +343,8 @@ do
 
 	local remoteIp = '127.0.0.1'
 	local remoteAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36"
-	local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent)
+	local aesIpStr = tools.aes128Encrypt(remoteIp, config.globalIpAesKey)
+	local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent) .. ',' .. aesIpStr
 	local aesKey = globalAesKey
 	local aesStr = toEncryptStr
 	local didCookie = tools.aes128Encrypt(aesStr, aesKey)

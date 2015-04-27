@@ -53,7 +53,7 @@ end
 function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 	
 	
-	local trueDeviceContent = tools.aes128Decrypt(deviceId, aesKey)
+	local trueDeviceContent = tostring(tools.aes128Decrypt(deviceId, aesKey))
 	
 	
 	if not trueDeviceContent then
@@ -61,10 +61,23 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 		return false, nil
 	end
 	
+	--对加密的deviceid进行解密
+	local didList = tools.split(trueDeviceContent, ',')
+	local didIpAgent = didList[1]
+	local aesEncryptIp = didList[2]
 	
+	ngx.log(ngx.INFO, string.format("deepCheckDeviceId aes128Decrypt, didIpAgent:%s | aesEncryptIp: %s ", didIpAgent, aesEncryptIp))
 	
-	local didIpAgent = trueDeviceContent
-	local expectShaStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent)
+	--拿到用户加密时用的ip地址
+	local trueRemoteLastIp = tools.aes128Decrypt(aesEncryptIp, config.globalIpAesKey)
+	
+	--如果ip解密失败
+	if not trueRemoteLastIp or trueRemoteLastIp == '' then
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt trueRemoteLastIp error, trueDeviceContent: %s ", trueDeviceContent))
+		return false, nil
+	end
+	
+	local expectShaStr = tools.sha256(trueRemoteLastIp..config.md5Gap..remoteAgent)
 	--检查ip地址是否合法
 	if didIpAgent ~= expectShaStr then
 		--记录错误

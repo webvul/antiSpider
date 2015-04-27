@@ -35,6 +35,10 @@ function doJsonp()
 
 		--将ip,agent和时间戳加密成待加密字符串,用内部aes加密key来进行加密
 		local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent)
+		local aesIpStr = tools.aes128Encrypt(remoteIp, config.globalIpAesKey)
+		--生成 xxxxx.yyyy 这种形式的did,前面是ip和agent的sha1，后面是ip的加密串
+		toEncryptStr = toEncryptStr .. ',' .. aesIpStr
+		
 		--生成加密session的字符串
 		local sessionSha256 = tools.sha256(enterTime..config.md5Gap..config.sessionKey)
 		--session cookie,base64编码
