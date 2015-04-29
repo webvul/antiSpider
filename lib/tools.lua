@@ -54,6 +54,11 @@ end
 function getRealIp()
 	
 	local header = ngx.req.get_headers()
+	--先拿ali的ip头
+	local aliIp = header['ali-cdn-real-ip']
+	if aliIp then
+		return aliIp
+	end
 
 	--如果没有 x-forwarded-for 头
 	if not header['x-forwarded-for'] then
