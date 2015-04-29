@@ -18,6 +18,9 @@ local iv = args['iv'] or ''
 ngx.log(ngx.INFO, string.format("TEST DID IV: %s", iv))
 local did = args['did'] or ''
 ngx.log(ngx.INFO, string.format("TEST DID DID: %s", did))
+local todeaes = args['todeaes'] or ''
+ngx.log(ngx.INFO, string.format("TEST DID todeaes: %s", todeaes))
+
 
 
 --开始生成加密串did
@@ -27,6 +30,9 @@ ngx.log(ngx.INFO, string.format("TEST DID toEncryptStr: %s", toEncryptStr))
 --加密串
 local aesStr = tools.aes128Encrypt(toEncryptStr, key)
 ngx.log(ngx.INFO, string.format("TEST DID toEncryptStr: %s", toEncryptStr))
+
+--解密
+local deaesStr = tools.aes128Decrypt(todeaes, key)
 
 --解密串
 local decodeDid
@@ -45,6 +51,7 @@ local tmpTable = {
 	nginx_toEncryptStr=toEncryptStr,
 	nginx_aesStr=aesStr,
 	client_decodeDid=decodeDid,
+	deaesStr=deaesStr,
 }
 
 ngx.header["Content-Type"] = 'text/plain'
