@@ -2,6 +2,7 @@ local cjson = require "cjson"
 
 ngx.header["Content-Type"] = 'text/plain'
 local args = ngx.req.get_uri_args()
+local printHeader = args['printHeader']
 
 --如果要求打印请求头
 if printHeader then
