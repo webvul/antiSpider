@@ -271,9 +271,14 @@ do
 	--ÓÐtd_sid£¬ÎÞtd_did
 	local nowTs = tostring(tools.getNowTs())
 	local trueSign = tools.sha256(nowTs..config.md5Gap..config.sessionKey)
-	local cookieSidVal = ngx.encode_base64(nowTs..'.'..trueSign)
+	local randomSha256 =  tools.sha256('2000000'..config.md5Gap..config.sessionKey)
+	local cookieSidVal = ngx.encode_base64(nowTs..','..trueSign..','..randomSha256)
 	
 	globalCookieVal = string.format('%s=%s;',config.sessionName, cookieSidVal)
+	
+	
+	
+	
 	
 	ngx.log(ngx.ERR, string.format("**************************proxy have td_sid no td_did ***********************"))
 	--ngx.log(ngx.ERR, string.format("#########__%s",globalCookieVal))
@@ -321,6 +326,7 @@ do
 	local aesKey = globalAesKey
 	local aesStr = toEncryptStr
 	local didCookie = ngx.escape_uri(tools.aes128Encrypt(aesStr, aesKey))
+	
 		
 	local httpc = http.new()
 	local res, err = httpc:request_uri(string.format("http://127.0.0.1%s", CHECK_URL_NO_JSONP), {
@@ -344,7 +350,7 @@ do
 	local remoteIp = '127.0.0.1'
 	local remoteAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36"
 	local aesIpStr = tools.aes128Encrypt(remoteIp, config.globalIpAesKey)
-	local aesRandomStr = tools.aes128Encrypt( '2000000', config.globalIpAesKey)
+	local aesRandomStr = tools.aes128Encrypt('2000000', config.globalIpAesKey)
 	local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent) .. ',' .. aesIpStr .. ',' .. aesRandomStr
 	local aesKey = globalAesKey
 	local aesStr = toEncryptStr
@@ -352,6 +358,25 @@ do
 	local didCookie2 = didCookie
 	r:set(string.format('black_%s',didCookie), '1')
 	didCookie = ngx.escape_uri(didCookie)
+	
+	
+	local globalAesKeyOld = '302702db952acfa2beb0563ded2da35a'
+	local didCookieOld = tools.aes128Encrypt(aesStr, globalAesKeyOld)
+	
+	ngx.log(ngx.ERR, string.format("######################## old key aes #######################"))
+	ngx.log(ngx.ERR, string.format("aesIpStr: %s", aesIpStr))
+	ngx.log(ngx.ERR, string.format("aesRandomStr: %s", aesRandomStr))
+	ngx.log(ngx.ERR, string.format("aesStr: %s", aesStr))
+	ngx.log(ngx.ERR, string.format("globalAesKeyOld: %s", globalAesKeyOld))
+	ngx.log(ngx.ERR, string.format("didCookieOld: %s", didCookieOld))
+	ngx.log(ngx.ERR, string.format("######################## old key aes #######################"))
+	
+	assert(aesStr == tools.aes128Decrypt(didCookieOld,globalAesKeyOld))
+	
+	local didCookieOld2 = didCookieOld
+	didCookieOld = ngx.escape_uri(didCookieOld)
+		
+	
 	
 	local httpc = http.new()
 	local res, err = httpc:request_uri(string.format("http://127.0.0.1%s", CHECK_URL_NO_JSONP), {
@@ -442,7 +467,7 @@ do
         method = "GET",
         headers = {
           ["User-Agent"] = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36",
-		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookie), globalCookieVal},
+		  ["Cookie"] = {string.format('%s=%s',config.deviceIdCookieName, didCookieOld), globalCookieVal},
 		  ["referrer"] = 'http://127.0.0.1/',
         }
     })
@@ -451,9 +476,14 @@ do
 	local data = trim(res.body)
 	assert(code==ngx.HTTP_OK)
 	assert(data==';callback(["1","",""]);')
-	local count = r:lindex(string.format(config.didKey,didCookie2), 0)
+	local count = r:lindex(string.format(config.didKey,didCookieOld2), 0)
+	
+	ngx.log(ngx.ERR, string.format("###################### didCookieOld2 count ########################"))
+	ngx.log(ngx.ERR, string.format("count: %s", count))
+	ngx.log(ngx.ERR, string.format("###################### didCookieOld2 count ########################"))
+	
 	assert(tonumber(count)==3)
-	local lastTs = r:get(string.format(config.dtsKey,didCookie2))
+	local lastTs = r:get(string.format(config.dtsKey,didCookieOld2))
 	assert(tonumber(lastTs))
 	
 	

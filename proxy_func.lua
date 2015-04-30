@@ -50,13 +50,14 @@ function erroResponse(r)
 end
 
 
-function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
+function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent, randomSha256)
 	
 	
 	local trueDeviceContent = tostring(tools.aes128Decrypt(deviceId, aesKey))
 	
+	ngx.log(ngx.INFO, string.format("deepCheck before, deviceId:%s, trueDeviceContent: %s", deviceId, trueDeviceContent))
 	
-	if not trueDeviceContent then
+	if not trueDeviceContent or trueRemoteLastIp == '' then
 		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt error, deviceId is %s, remoteIp %s",deviceId, remoteIp))
 		return false, nil
 	end
@@ -91,6 +92,13 @@ function deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
 	--如果这个整数不在100万和1000万之间，则报错
 	if not trueRandomNum or trueRandomNum < 1000000 or trueRandomNum > 10000000 then
 		ngx.log(ngx.ERR, string.format("deepCheckDeviceId aes128Decrypt trueRandom invalid, trueRandom: %s ", trueRandom))
+		return false, nil
+	end
+	
+	--判断这个随机数是不是和session的randomSha256匹配
+	local didRandomSha256 = tools.sha256(trueRandomNum..config.md5Gap..config.sessionKey)
+	if didRandomSha256 ~= randomSha256 then
+		ngx.log(ngx.ERR, string.format("deepCheckDeviceId didRandomSha256 !=  randomSha256 trueRandom: %s, sessionRandomSha256: %s ", trueRandom, randomSha256))
 		return false, nil
 	end
 	
@@ -131,7 +139,7 @@ function doProxy()
 	local remoteAgent = remoteAgent
 
 	--判断sessioncookie是否有效
-	local isValidCookie, err = tools.verifySessionCookie()
+	local isValidCookie, err, randomSha256 = tools.verifySessionCookie()
 	--出错直接放过
 	if err then
 		return dealProxyPass(nil, true)
@@ -154,7 +162,7 @@ function doProxy()
 	local cachDict = ngx.shared.cachDict
 	
 	--检查deviceId的值是否被篡改
-	local ok, err = deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent)
+	local ok, err = deepCheckDeviceId(deviceId, aesKey, remoteIp, remoteAgent, randomSha256)
 	--如果deep检查key错误，则要进一步判断是否更改过key
 	if not ok then
 		local lastKey = cachDict:get(config.lastGlobalAesKey)
@@ -162,7 +170,7 @@ function doProxy()
 		if lastKey == ngx.null or not lastKey or lastGlobalAesKey == '' then
 			return erroResponse()
 		else
-			local ok, err = deepCheckDeviceId(deviceId, lastKey, remoteIp, remoteAgent)
+			local ok, err = deepCheckDeviceId(deviceId, lastKey, remoteIp, remoteAgent, randomSha256)
 			if not ok then
 				ngx.log(ngx.ERR, string.format("deepCheckDeviceId twice still error, deviceid: %s, remoteIp:%s", deviceId, remoteIp))
 				return erroResponse()

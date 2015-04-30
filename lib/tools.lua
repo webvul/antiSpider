@@ -174,18 +174,18 @@ function verifySessionCookie()
 	local agent = header['User-Agent'] or ''
 	--出错了
 	if not cookie then
-		return nil, err
+		return nil, err, nil
 	end
 	local sessionVal, err = cookie:get(config.sessionName)
 	
 	--出错了
 	if err then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie get cookie err: %s,  or no cookie name: %s", err, config.sessionName))
-		return false, nil
+		return false, nil, nil
 	end
 	if sessionVal == ngx.null or  not sessionVal or sessionVal == '' then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie not have sessionVal, remoteip: %s, agent: %s", remoteIp, agent))
-		return false, nil
+		return false, nil, nil
 	end
 
 	--检查sessionCookie是否合法
@@ -193,20 +193,28 @@ function verifySessionCookie()
 	sessionVal = ngx.decode_base64(sessionVal)
 	if not sessionVal or sessionVal == '' then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie not valid base64, remoteip: %s, agent: %s", remoteIp, agent))
-		return false, nil
+		return false, nil, nil
 	end
 	
-	local sessionTimestamp = string.sub(sessionVal,1,10)
-	local sessionSign = string.sub(sessionVal,12, -1)
+	local sessionValList = split(sessionVal, ',')
+	local sessionTimestamp = sessionValList[1]
+	local sessionSign = sessionValList[2]
+	local randomSha256 = sessionValList[3]
+	
+	ngx.log(ngx.INFO, string.format("sessionVal:%s, sessionTimestamp: %s, sessionSign: %s, randomSha256:%s", sessionVal, sessionTimestamp, sessionSign, randomSha256))
+	
 	local trueSign = sha256(sessionTimestamp..config.md5Gap..config.sessionKey)
 	if trueSign ~= sessionSign then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie sign not valid, sessionval : %s, remoteip: %s, agent: %s", sessionVal, remoteIp, agent))
-		return false, nil
+		return false, nil, nil
 	elseif getNowTs() - tonumber(sessionTimestamp) > 3600*48 then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie timestamp expire sessionval : %s, remoteip: %s, agent: %s", sessionVal, remoteIp, agent))
-		return false, nil
+		return false, nil, nil
+	elseif not randomSha256 then
+		ngx.log(ngx.ERR, string.format("verifySessionCookie not have randomSha256, sessionval : %s, remoteip: %s, agent: %s", sessionVal, remoteIp, agent))
+		return false, nil, nil
 	else
-		return true, nil
+		return true, nil, randomSha256
 	end
 end
 

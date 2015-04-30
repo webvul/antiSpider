@@ -39,16 +39,17 @@ function doJsonp()
 		
 		--生成随机数，100万-1000万之间用来散列deviceid
 		math.randomseed(tostring(os.time()):reverse():sub(1, 6))
-		local randNum = math.random(1000000, 10000000)
-		local aesRandomStr = tools.aes128Encrypt(tostring(randNum), config.globalIpAesKey)
+		local randNum = tostring(math.random(1000000, 10000000))
+		local aesRandomStr = tools.aes128Encrypt(randNum, config.globalIpAesKey)
 		
 		--生成 xxxxx.yyyy,zzz 这种形式的did,前面是ip和agent的sha1，后面是ip的加密串, 最后是随机数的加密串
-		toEncryptStr = toEncryptStr .. ',' .. aesIpStr .. ',' .. aesRandomStr
+		toEncryptStr = string.format('%s,%s,%s', toEncryptStr, aesIpStr, aesRandomStr)
 		
 		--生成加密session的字符串
 		local sessionSha256 = tools.sha256(enterTime..config.md5Gap..config.sessionKey)
+		local randNumSha256 = tools.sha256(randNum..config.md5Gap..config.sessionKey)
 		--session cookie,base64编码
-		local sessionVal = ngx.encode_base64(string.format('%s.%s', enterTime, sessionSha256))
+		local sessionVal = ngx.encode_base64(string.format('%s,%s,%s', enterTime, sessionSha256, randNumSha256))
 
 		--设置加密cookie
 		local ok, err = cookie:set({
