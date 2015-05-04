@@ -12,6 +12,7 @@ function doSetCookie()
 		local args = ngx.req.get_uri_args()
 		local did = args['did']
 		if not did then
+			ngx.log(ngx.ERR, string.format("not have did param in request, remoteIp : %s", tools.getRealIp()))
 			local resStr = tools.jsonp('0')
 			tools.jsonpSay(resStr)
 			return

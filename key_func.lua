@@ -85,7 +85,7 @@ function doJsonp()
 		
 		--如果超过1秒, 记录错误日志
 		local dealTime = tools.getNowTs() - enterTime
-		if dealTime > 1 then
+		if dealTime > 0.5 then
 			ngx.log(ngx.ERR, string.format("jsonp deal too long : %s", dealTime))
 		end
 
