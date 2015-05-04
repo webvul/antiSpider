@@ -207,7 +207,7 @@ function verifySessionCookie()
 	if trueSign ~= sessionSign then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie sign not valid, sessionval : %s, remoteip: %s, agent: %s", sessionVal, remoteIp, agent))
 		return false, nil, nil
-	elseif getNowTs() - tonumber(sessionTimestamp) > 3600*48 then
+	elseif getNowTs() - tonumber(sessionTimestamp) > 3600*4 then
 		ngx.log(ngx.ERR, string.format("verifySessionCookie timestamp expire sessionval : %s, remoteip: %s, agent: %s", sessionVal, remoteIp, agent))
 		return false, nil, nil
 	elseif not randomSha256 then
