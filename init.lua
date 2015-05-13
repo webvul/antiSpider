@@ -2,7 +2,6 @@
 	
 require "cjson"	--cjson库
 require "ngx" --ngx库
-local tools = require "tools"
 
 
 
