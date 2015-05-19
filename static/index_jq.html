@@ -5,8 +5,9 @@
 <title>反爬虫jssdk测试</title>
 <meta name="keywords" content="Base64编码,Base64解码" />
 
-<script type="text/javascript" src="http://js.40017.cn/cn/min/??/cn/public/fish.1.4.7.js"></script>
-<script type="text/javascript" src="http://js.40017.cn/cn/c/c/td/td-all.js?v=20150504"></script>
+<script type="text/javascript" src="http://js.40017.cn/cn/c/zt/2015/0428/jquery-1.8.0.js"></script>
+<script type="text/javascript" src="jquery.cookie.js"></script>
+<script type="text/javascript" src="td-jq.js"></script>
 
 
 </head>
@@ -19,29 +20,24 @@
 
 
 function loghtml(txt){
-    var logdiv = fish.dom('.log-div');
-    if(!logdiv){
-        logdiv = document.createElement('div');
-        document.body.appendChild(logdiv);
-        logdiv.className = 'log-div';
-    }
-    fish.one(logdiv).html('<p>'+ txt +'</p>')
+    var logdiv = $('#info');
+    logdiv.html('<p>'+ txt +'</p>')
 }
-fish.ready(function(){
+$(function(){
     var getKeyTime = new Date().getTime(),
         checkUrl = 'http://irondome.ly.com/td/check?_tdcheck=1',
         tdUrl = 'http://irondome.ly.com/anitservice/AntiStatus.ashx';
-    fish.td(function(){
-        fish.ajax({
+    $.td(function(){
+        $.ajax({
             url: checkUrl,
-            type: "jsonp",
+            dataType: "jsonp",
             timeout:1000,
-            err:function(){
+            error:function(){
                 var nTime = new Date().getTime() - getKeyTime;
                 loghtml('check-error')
                 recordInfo('typ=6&chkr=2&rdyt=' + nTime);
             },
-            fn: function(data) {
+            success: function(data) {
                 var nTime = new Date().getTime() - getKeyTime;
                 if(data[0] == '1'){
                     loghtml('check-1')
@@ -55,9 +51,9 @@ fish.ready(function(){
     })
 
     function recordInfo(data){
-        fish.ajax({
+        $.ajax({
             url: tdUrl,
-            data: data,
+            dataType: data,
             type: 'jsonp'
         });
     }
