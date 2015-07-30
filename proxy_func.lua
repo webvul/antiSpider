@@ -131,6 +131,7 @@ function doProxy()
 	end
 	--如果 gateStateVal 为0，表示关闭验证，直接pass
 	if gateStateVal == '0' then
+		ngx.log(ngx.ERR, string.format('gateStateVal eq 0, close system'))
 		return dealProxyPass()
 	end
 	
