@@ -23,16 +23,16 @@ function doJsonp()
 		local cookie, err = ck:new()
 
 		--如果关闭开关或者出错了,或者未用agent请求
-		--if gateStateVal == '0' or not cookie then
-		--	local resStr = tools.jsonp('', '')
-		--	tools.jsonpSay(resStr)
-		--	return
-		--end
+		if gateStateVal == '0' or not cookie then
+			local resStr = tools.jsonp('', '')
+			tools.jsonpSay(resStr)
+			return
+		end
 
 		local enterTime = tools.getNowTs()
 		local remoteIp = tools.getRealIp()
 		local remoteAgent = remoteAgent
-
+		
 		--将ip,agent和时间戳加密成待加密字符串,用内部aes加密key来进行加密
 		local toEncryptStr = tools.sha256(remoteIp..config.md5Gap..remoteAgent)
 		local aesIpStr = tools.aes128Encrypt(remoteIp, config.globalIpAesKey)
