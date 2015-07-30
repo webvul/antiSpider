@@ -14,10 +14,18 @@ function checkState(isGetKey)
 	local result = tools.rebuildCacheDict(isGetKey)
 	local remoteIp = tools.getRealIp()
 	
+	--缓存字典对象
+	local cachDict = ngx.shared.cachDict
+	--ngx头部
+	local ngxHeader = ngx.req.get_headers() or {}
+	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
+	local remoteAgent = tools.trim(ngxHeader['User-Agent'] or '')
+	local referer = tools.trim(ngxHeader['referer'] or ngxHeader['referrer'] or '')
+	
 	if not result then
 		--如果重建缓存出错，直接放过
 		tools.forceCloseSystem()
-		return '0', '', nil, '', true
+		return '0', '', nil, '', remoteAgent
 	end
 	
 	
@@ -26,18 +34,10 @@ function checkState(isGetKey)
 		--如果在白名单中，则把开关关闭
 		if v == remoteIp then
 			gateStateVal = '0'
-			return '0', '', nil, '', true
+			return '0', '', nil, '', remoteAgent
 		end
 	end
 	
-	
-	--缓存字典对象
-	local cachDict = ngx.shared.cachDict
-	
-	local ngxHeader = ngx.req.get_headers() or {}
-	--如果没有传入'User-Agent'属性,jsonp不会返回key和secret
-	local remoteAgent = tools.trim(ngxHeader['User-Agent'] or '')
-	local referer = tools.trim(ngxHeader['referer'] or ngxHeader['referrer'] or '')
 	
 	--检查agent
 	if not remoteAgent or remoteAgent == '' then
