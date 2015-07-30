@@ -25,7 +25,7 @@ function checkState(isGetKey)
 	if not result then
 		--如果重建缓存出错，直接放过
 		tools.forceCloseSystem()
-		return '0', '', nil, '', remoteAgent
+		return '0', '', nil, remoteAgent, false
 	end
 	
 	
@@ -34,7 +34,7 @@ function checkState(isGetKey)
 		--如果在白名单中，则把开关关闭
 		if v == remoteIp then
 			gateStateVal = '0'
-			return '0', '', nil, '', remoteAgent
+			return '0', '', nil, remoteAgent, false
 		end
 	end
 	
