@@ -20,6 +20,17 @@ function checkState(isGetKey)
 		return '0', '', nil, '', true
 	end
 	
+	
+	--检查白名单	
+	for i,v in ipairs(ipWhiteList) do
+		--如果在白名单中，则把开关关闭
+		if v == remoteIp then
+			gateStateVal = '0'
+			return '0', '', nil, '', true
+		end
+	end
+	
+	
 	--缓存字典对象
 	local cachDict = ngx.shared.cachDict
 	
@@ -73,15 +84,7 @@ function checkState(isGetKey)
 	--去获取共享字典中的全局key
 	local aesKey = cachDict:get(config.globalAesKey) or ''
 
-	--检查白名单
 	
-	for i,v in ipairs(ipWhiteList) do
-		--如果在白名单中，则把开关关闭
-		if v == remoteIp then
-			gateStateVal = '0'
-			break
-		end
-	end
 
 	return gateStateVal, aesKey, nil, remoteAgent
 
