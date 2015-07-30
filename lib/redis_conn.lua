@@ -4,6 +4,7 @@ local redis = require "resty.redis"
 local RedisConn = require "config"["connRedis"]
 local chash = require "chash" 
 local cjson = require "cjson" 
+local tools = require "tools"
 
 --初始化函数
 local useUpstream = false
@@ -30,7 +31,7 @@ function conn(deviceId)
 	
 	--如果是单机器连接
 	if not useUpstream then
-		return _conn(RedisConn.host)
+		return _conn(RedisConn.host, RedisConn.port)
 	else
 		--如果是多机器集群
 		local upstreamHost
@@ -40,9 +41,11 @@ function conn(deviceId)
 		else
 			upstreamHost = chash.get_upstream(deviceId)
 		end
-		
+		--切分ip:port
+		local redisHostPort = tools.split(upstreamHost, ':')
 		ngx.log(ngx.INFO, string.format('redis host upstream deviceId %s, host %s', deviceId, upstreamHost))
-		return _conn(upstreamHost)
+		
+		return _conn(redisHostPort[1], redisHostPort[2])
 	end
 	
 
@@ -50,12 +53,12 @@ function conn(deviceId)
 end
 
 --真正连接的函数
-function _conn(host)
+function _conn(host, port)
 
 	--直接连接
 	local r = redis:new()
 	r:set_timeout(1000) -- 2 second
-	local ok, err = r:connect(host, RedisConn.port)
+	local ok, err = r:connect(host, port)
 	
 	if not ok then
 		ngx.log(ngx.ERR, "redis library error " .. err) --出错记录错误日志，无法连接redis
