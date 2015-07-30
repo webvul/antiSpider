@@ -16,6 +16,7 @@ function dealProxyPass(r, isServerError)
 	end
 	--如果服务器异常了，那就需要关闭state
 	if isServerError then
+		ngx.log(ngx.INFO, string.format("isServerError is true, deal proxy pass"))
 		tools.forceCloseSystem()
 	end
 	
