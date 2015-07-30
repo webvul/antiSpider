@@ -309,6 +309,7 @@ function rebuildCacheDict(isGetKey, isForceRebuild)
 	end	
 	--如果redis没有找到，则关闭,redis返回的nil必须使用ngx.null
 	if gateStateVal == ngx.null or not gateStateVal or gateStateVal == '' then
+		ngx.log(ngx.ERR, string.format("rebuildCacheDict redis not found  %s", config.globalStateKey))
 		gateStateVal = '0'
 	end
 	
