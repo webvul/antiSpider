@@ -28,7 +28,7 @@
 	
 	http://gny.ly.com/tours/GetSameTitleHotSaleLines
 	
-	调整后的请求地址为（前端请求地址必须修改，后端也最好修改，不改的话需要铁穹进行url改写）:
+	调整后的请求地址为（前端请求地址必须修改，后端也最好修改下，不改的话需要铁穹进行url改写）:
 	
 	http://irondome.ly.com/gny/tours/GetSameTitleHotSaleLines
 	
