@@ -39,7 +39,7 @@ elseif size == 50 then
 elseif size	 == 500 then
     ngx.say(cache:get('500k'))
 else
-	ngx.say('ok')
+	ngx.say(tostring(size) or 'ok')
 end
 
 
