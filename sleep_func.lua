@@ -35,7 +35,7 @@ ngx.sleep(sleep)
 if size == 1 then
 	ngx.say(cache:get('1k'))
 elseif size == 50 then
-	ngx.say(cache:get('10k'))
+	ngx.say(cache:get('50k'))
 elseif size	 == 500 then
     ngx.say(cache:get('500k'))
 else
