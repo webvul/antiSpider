@@ -1,0 +1,2 @@
+schedule==0.3.1
+supervisor==3.1.3
